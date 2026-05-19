@@ -208,12 +208,8 @@
     var DPR = 2;
     var W = 700;
     var COL_NAME = 16, COL_INK = 230, COL_PLAY = 370, COL_PCT = 510, COL_WR = 600;
-    var ROW_H = 28;
-    var HEADER_H = 110;
-    var STATS_H = 0;
-    var TABLE_HEAD_H = 30;
-    var FOOTER_H = 36;
-    var H = HEADER_H + STATS_H + TABLE_HEAD_H + rows.length * ROW_H + FOOTER_H;
+    var ROW_H = 28, HEADER_H = 110, TABLE_HEAD_H = 30, LEGEND_H = 22, FOOTER_H = 36;
+    var H = HEADER_H + TABLE_HEAD_H + rows.length * ROW_H + LEGEND_H + FOOTER_H;
 
     var canvas = document.createElement('canvas');
     canvas.width = W * DPR;
@@ -225,83 +221,71 @@
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 0, W, H);
 
-    // Header gradient band
+    // Header gradient
     var grad = ctx.createLinearGradient(0, 0, W, 0);
     grad.addColorStop(0, COLORS[c1].hex + '33');
     grad.addColorStop(1, COLORS[c2].hex + '33');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, HEADER_H);
 
-    // Left accent bar
+    // Accent bars
     ctx.fillStyle = COLORS[c1].hex;
     ctx.fillRect(0, 0, 4, HEADER_H / 2);
     ctx.fillStyle = COLORS[c2].hex;
     ctx.fillRect(0, HEADER_H / 2, 4, HEADER_H / 2);
 
-    // Color dots
-    var dotY = 38;
-    ctx.beginPath(); ctx.arc(28, dotY, 11, 0, Math.PI * 2);
+    // Dots
+    ctx.beginPath(); ctx.arc(28, 38, 11, 0, Math.PI * 2);
     ctx.fillStyle = COLORS[c1].hex; ctx.fill();
-    ctx.beginPath(); ctx.arc(50, dotY, 11, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(50, 38, 11, 0, Math.PI * 2);
     ctx.fillStyle = COLORS[c2].hex; ctx.fill();
 
     // Title
     ctx.fillStyle = '#e6edf3';
     ctx.font = 'bold 24px system-ui, sans-serif';
-    ctx.fillText(COLORS[c1].name + ' / ' + COLORS[c2].name, 72, dotY + 8);
-
-    // Subtitle
+    ctx.fillText(COLORS[c1].name + ' / ' + COLORS[c2].name, 72, 46);
     ctx.fillStyle = '#8b949e';
     ctx.font = '12px system-ui, sans-serif';
-    ctx.fillText('Lorcana Stats  -  duels.ink', 72, dotY + 26);
+    ctx.fillText('Lorcana Stats  -  duels.ink', 72, 64);
 
     // Stat pills
     var wr = Math.round(wins / games * 100);
     var stats = [
-      { label: 'Parties', val: String(games) },
-      { label: 'Winrate',  val: wr + '%', highlight: true },
-      { label: 'Victoires', val: String(wins) },
-      { label: 'Defaites', val: String(games - wins) },
+      { l: 'Parties',   v: String(games) },
+      { l: 'Winrate',   v: wr + '%', hi: true },
+      { l: 'Victoires', v: String(wins) },
+      { l: 'Defaites',  v: String(games - wins) },
     ];
     var pillW = 140, pillH = 40, pillY = HEADER_H - pillH - 12, gap = 8;
     var startX = W - stats.length * (pillW + gap) + gap - 8;
     stats.forEach(function(s, i) {
       var px = startX + i * (pillW + gap);
       ctx.fillStyle = '#161b22';
-      roundRect(ctx, px, pillY, pillW, pillH, 7);
-      ctx.fill();
-      ctx.strokeStyle = '#30363d';
-      ctx.lineWidth = 1;
-      roundRect(ctx, px, pillY, pillW, pillH, 7);
-      ctx.stroke();
-      ctx.fillStyle = '#8b949e';
-      ctx.font = '10px system-ui, sans-serif';
-      ctx.fillText(s.label.toUpperCase(), px + 10, pillY + 14);
-      ctx.fillStyle = s.highlight
-        ? (wr >= 60 ? '#3fb950' : wr >= 50 ? '#d29922' : '#f85149')
-        : '#e6edf3';
+      roundRect(ctx, px, pillY, pillW, pillH, 7); ctx.fill();
+      ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+      roundRect(ctx, px, pillY, pillW, pillH, 7); ctx.stroke();
+      ctx.fillStyle = '#8b949e'; ctx.font = '10px system-ui, sans-serif';
+      ctx.fillText(s.l.toUpperCase(), px + 10, pillY + 14);
+      ctx.fillStyle = s.hi ? (wr >= 60 ? '#3fb950' : wr >= 50 ? '#d29922' : '#f85149') : '#e6edf3';
       ctx.font = 'bold 17px system-ui, sans-serif';
-      ctx.fillText(s.val, px + 10, pillY + 32);
+      ctx.fillText(s.v, px + 10, pillY + 32);
     });
 
     // Table header
-    var ty = HEADER_H + STATS_H;
-    ctx.fillStyle = '#161b22';
-    ctx.fillRect(0, ty, W, TABLE_HEAD_H);
-    ctx.strokeStyle = '#30363d';
-    ctx.lineWidth = 1;
+    var ty = HEADER_H;
+    ctx.fillStyle = '#161b22'; ctx.fillRect(0, ty, W, TABLE_HEAD_H);
+    ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, ty); ctx.lineTo(W, ty);
     ctx.moveTo(0, ty + TABLE_HEAD_H); ctx.lineTo(W, ty + TABLE_HEAD_H);
     ctx.stroke();
-
     ctx.font = '600 10px system-ui, sans-serif';
     [
-      { t: 'CARTE',   x: COL_NAME, c: '#8b949e' },
-      { t: 'ENCREE',  x: COL_INK,  c: '#E74C3C' },
-      { t: 'JOUEE',   x: COL_PLAY, c: '#3498DB' },
-      { t: '% ENC',   x: COL_PCT,  c: '#8b949e' },
-      { t: 'WR',      x: COL_WR,   c: '#8b949e' },
+      { t: 'CARTE',    x: COL_NAME, c: '#8b949e' },
+      { t: 'ENCREE',   x: COL_INK,  c: '#E74C3C' },
+      { t: 'JOUEE',    x: COL_PLAY, c: '#3498DB' },
+      { t: '% ENC.',   x: COL_PCT,  c: '#8b949e' },
+      { t: 'WR JOUE',  x: COL_WR,   c: '#8b949e' },
     ].forEach(function(h) {
       ctx.fillStyle = h.c;
       ctx.fillText(h.t, h.x, ty + 19);
@@ -310,45 +294,35 @@
     // Rows
     var maxI = Math.max.apply(null, rows.map(function(r){ return r.inked; }));
     var maxP = Math.max.apply(null, rows.map(function(r){ return r.played; }));
-
     rows.forEach(function(r, idx) {
       var ry = ty + TABLE_HEAD_H + idx * ROW_H;
       ctx.fillStyle = idx % 2 === 0 ? '#0d1117' : '#0f1318';
       ctx.fillRect(0, ry, W, ROW_H);
-
-      // Card name
-      ctx.fillStyle = '#e6edf3';
-      ctx.font = '500 12px system-ui, sans-serif';
+      ctx.fillStyle = '#e6edf3'; ctx.font = '500 12px system-ui, sans-serif';
       var name = r.card.length > 30 ? r.card.substring(0, 29) + '.' : r.card;
       ctx.fillText(name, COL_NAME, ry + ROW_H / 2 + 4);
-
-      // Bars
       drawBar(ctx, COL_INK,  ry + 4, 120, ROW_H - 8, r.inked,  maxI, '#E74C3C', r.inked);
       drawBar(ctx, COL_PLAY, ry + 4, 120, ROW_H - 8, r.played, maxP, '#3498DB', r.played);
-
-      // Badges
       drawBadge(ctx, COL_PCT, ry + 4, 72, ROW_H - 8, r.inkRate);
       drawBadge(ctx, COL_WR,  ry + 4, 72, ROW_H - 8, r.pWR);
-
-      // Row separator
-      ctx.strokeStyle = '#21262d';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, ry + ROW_H); ctx.lineTo(W, ry + ROW_H);
       ctx.stroke();
     });
 
+    // Legend line
+    var legendY = H - FOOTER_H - 12;
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.fillText('% enc. = encree / (encree + jouee)   |   WR joue = winrate dans les parties ou la carte a ete jouee', 16, legendY);
+
     // Footer
     var fy = H - FOOTER_H;
-    ctx.fillStyle = '#161b22';
-    ctx.fillRect(0, fy, W, FOOTER_H);
-    ctx.strokeStyle = '#30363d';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, fy); ctx.lineTo(W, fy);
-    ctx.stroke();
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '11px system-ui, sans-serif';
+    ctx.fillStyle = '#161b22'; ctx.fillRect(0, fy, W, FOOTER_H);
+    ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke();
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px system-ui, sans-serif';
     ctx.fillText('flaxeau.github.io/lorcana-stats  |  Outil non-officiel, non affilie a Ravensburger ou Disney', 16, fy + 22);
 
     // Download
@@ -415,7 +389,7 @@
       + '<button id="lrc-export" style="background:#238636;border:none;border-radius:6px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">&#x2B07; Export PNG</button>'
       + '</div>';
 
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
     [['Parties', games, ''], ['Winrate', wr + '%', wins + 'V - ' + (games - wins) + 'D'],
      ['Encrages', totalInk, ''], ['Jeux de cartes', totalPlay, '']].forEach(function(m) {
       html += '<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px">'
@@ -426,13 +400,21 @@
     });
     html += '</div>';
 
+    // Legend
+    html += '<div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:#8b949e;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:6px 10px;flex-wrap:wrap">'
+      + '<span><span style="color:#E74C3C;font-weight:600">Encree</span> = fois encree</span>'
+      + '<span><span style="color:#3498DB;font-weight:600">Jouee</span> = fois jouee</span>'
+      + '<span><span style="font-weight:600;color:#e6edf3">% enc.</span> = encree / (encree+jouee)</span>'
+      + '<span><span style="font-weight:600;color:#e6edf3">WR joue</span> = winrate quand jouee</span>'
+      + '</div>';
+
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px">'
       + '<thead><tr style="border-bottom:1px solid #30363d">'
       + '<th style="text-align:left;padding:6px 4px;color:#8b949e;font-weight:500">Carte</th>'
       + '<th style="padding:6px 4px;color:#E74C3C;font-weight:500;min-width:80px">Encree</th>'
       + '<th style="padding:6px 4px;color:#3498DB;font-weight:500;min-width:80px">Jouee</th>'
-      + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center">%</th>'
-      + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center">WR</th>'
+      + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center" title="Taux d\'encrage">% enc.</th>'
+      + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center" title="Winrate quand jouee">WR joue</th>'
       + '</tr></thead><tbody>';
 
     rows.forEach(function(r, idx) {
