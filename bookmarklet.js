@@ -10,12 +10,12 @@
   if (existing) { existing.remove(); return; }
 
   var COLORS = {
-    amber:    { name: 'Ambre',      hex: '#E8A30A' },
-    amethyst: { name: 'Améthyste', hex: '#9B59B6' },
-    emerald:  { name: 'Émeraude',  hex: '#27AE60' },
-    ruby:     { name: 'Ruby',       hex: '#E74C3C' },
-    sapphire: { name: 'Saphir',     hex: '#3498DB' },
-    steel:    { name: 'Acier',      hex: '#7F8C8D' },
+    amber:    { name: 'Ambre',      hex: '#E8A30A', api: 'Amber' },
+    amethyst: { name: 'Améthyste', hex: '#9B59B6', api: 'Amethyst' },
+    emerald:  { name: 'Émeraude',  hex: '#27AE60', api: 'Emerald' },
+    ruby:     { name: 'Ruby',       hex: '#E74C3C', api: 'Ruby' },
+    sapphire: { name: 'Saphir',     hex: '#3498DB', api: 'Sapphire' },
+    steel:    { name: 'Acier',      hex: '#7F8C8D', api: 'Steel' },
   };
   var COLOR_KEYS = Object.keys(COLORS);
   var PAIRS = [];
@@ -23,17 +23,20 @@
     for (var j = i + 1; j < COLOR_KEYS.length; j++)
       PAIRS.push([COLOR_KEYS[i], COLOR_KEYS[j]]);
 
-  function sleep(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
+  // Build the "Color1/Color2" string that Duels.ink uses in your_deck_colors
+  function deckColorsKey(c1, c2) {
+    var names = [COLORS[c1].api, COLORS[c2].api].slice().sort();
+    return names[0] + '/' + names[1];
+  }
 
   function dot(color) {
     return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'
       + COLORS[color].hex + ';vertical-align:middle;margin-right:3px"></span>';
   }
 
-  async function fetchReplay(gameId) {
+  // Decompress a gzip blob and return parsed JSON
+  async function decompressGzip(blob) {
     try {
-      var resp = await fetch('/api/replay/' + gameId);
-      var blob = await resp.blob();
       var ds = new DecompressionStream('gzip');
       var decompressed = blob.stream().pipeThrough(ds);
       var reader = decompressed.getReader();
@@ -51,87 +54,118 @@
     } catch(e) { return null; }
   }
 
-  function getDeckColors(data) {
-    var snap = (data.baseSnapshot && data.baseSnapshot.myPlayer) || {};
-    var cards = (snap.hand || []).concat(snap.inkwell || []);
-    var set = {};
-    cards.forEach(function(c){ (c.colors || []).forEach(function(col){ set[col] = 1; }); });
-    return Object.keys(set).sort();
+  // Fetch gamelog from CDN URL and return parsed object
+  async function fetchGamelog(url) {
+    try {
+      var resp = await fetch(url);
+      var blob = await resp.blob();
+      return await decompressGzip(blob);
+    } catch(e) { return null; }
   }
 
-  async function loadGameIds(c1, c2) {
-    return new Promise(function(resolve) {
-      var iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1400px;height:900px;opacity:0;pointer-events:none;z-index:-1';
-      iframe.src = '/match-history?colors=' + c1 + ',' + c2 + '&source=matchmaking';
-      document.body.appendChild(iframe);
-      var start = Date.now();
-      var ticker = setInterval(async function() {
-        try {
-          var d = iframe.contentDocument;
-          var links = d.querySelectorAll('a[href*="/replay/"]');
-          if (links.length > 0 || Date.now() - start > 14000) {
-            clearInterval(ticker);
-            for (var s = 0; s < 14; s++) {
-              d.documentElement.scrollTop = d.documentElement.scrollHeight;
-              await sleep(350);
-            }
-            var all = d.querySelectorAll('a[href*="/replay/"]');
-            var ids = [], seen = {};
-            all.forEach(function(a) {
-              var m = a.href.match(/\/replay\/([^?#]+)/);
-              if (m && !seen[m[1]]) { seen[m[1]] = 1; ids.push(m[1]); }
-            });
-            document.body.removeChild(iframe);
-            resolve(ids);
-          }
-        } catch(e) { clearInterval(ticker); try { document.body.removeChild(iframe); } catch(_){} resolve([]); }
-      }, 500);
-    });
+  // Load all matching game IDs from the match-history API (with pagination)
+  async function loadMatchingGames(c1, c2) {
+    var targetColors = deckColorsKey(c1, c2);
+    var allGames = [];
+    var cursor = null;
+
+    while (true) {
+      var url = '/api/me/match-history?format=json&limit=1000&source=matchmaking';
+      if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+
+      var resp = await fetch(url);
+      if (!resp.ok) break;
+      var data = await resp.json();
+      var games = data.games || [];
+
+      games.forEach(function(g) {
+        if (g.your_deck_colors === targetColors) {
+          allGames.push({
+            game_id: g.game_id,
+            your_player: g.your_player,
+            result: g.result,
+          });
+        }
+      });
+
+      // Stop if no more pages or no games returned
+      if (!data.next_cursor || games.length === 0) break;
+      cursor = data.next_cursor;
+    }
+
+    return allGames;
   }
 
+  // ── Main analysis function ────────────────────────────────────────────────
   async function analyse(c1, c2) {
-    setStatus('Chargement des parties…');
-    var ids = await loadGameIds(c1, c2);
-    if (ids.length === 0) {
+    setStatus('Chargement de l\'historique…');
+
+    var games = await loadMatchingGames(c1, c2);
+    if (games.length === 0) {
       setStatus('Aucune partie trouvée pour ' + COLORS[c1].name + ' / ' + COLORS[c2].name + '.');
       return;
     }
-    setStatus('0 / ' + ids.length + ' parties analysées…');
+
+    setStatus('Récupération de ' + games.length + ' gamelogs…');
+
+    // Fetch bulk gamelog download URLs (max 1000 per request)
+    var allIds = games.map(function(g){ return g.game_id; });
+    var manifestResp = await fetch('/api/me/bulk-gamelogs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: allIds }),
+    });
+    var manifest = await manifestResp.json();
+
+    // Build lookup: game_id → { result, your_player, url }
+    var gameLookup = {};
+    games.forEach(function(g){ gameLookup[g.game_id] = g; });
+    (manifest.files || []).forEach(function(f){ if (gameLookup[f.id]) gameLookup[f.id].url = f.url; });
+
+    var gameList = games.filter(function(g){ return g.url; });
+    if (gameList.length === 0) {
+      setStatus('Impossible de récupérer les gamelogs.');
+      return;
+    }
+
+    // Process gamelogs in batches of 5
     var inkStats = {}, playStats = {}, cardWS = {};
     var processed = 0, wins = 0;
 
-    for (var i = 0; i < ids.length; i += 5) {
-      var batch = ids.slice(i, i + 5);
-      var results = await Promise.all(batch.map(fetchReplay));
-      results.forEach(function(data) {
+    for (var i = 0; i < gameList.length; i += 5) {
+      var batch = gameList.slice(i, i + 5);
+      var results = await Promise.all(batch.map(function(g){ return fetchGamelog(g.url); }));
+
+      results.forEach(function(data, idx) {
         if (!data) return;
-        var dc = getDeckColors(data);
-        var strict = dc.length === 2 && dc.indexOf(c1) >= 0 && dc.indexOf(c2) >= 0;
-        if (!strict) return;
+        var game = batch[idx];
+        var myPlayer = game.your_player; // integer 1 or 2
+        var won = game.result === 'win';
+
         processed++;
-        var my = data.perspective;
-        var won = data.winner === my;
         if (won) wins++;
-        (data.logs || []).forEach(function(log) {
-          if (log.player !== my) return;
-          var name = log.data && log.data.cardName;
+
+        Object.values(data).forEach(function(entry) {
+          if (entry.player !== myPlayer) return;
+          var name = entry.data && entry.data.cardName;
           if (!name) return;
           if (!cardWS[name]) cardWS[name] = { iW:0, iG:0, pW:0, pG:0 };
-          if (log.type === 'CARD_INKED') {
+
+          if (entry.type === 'CARD_INKED') {
             inkStats[name] = (inkStats[name] || 0) + 1;
             cardWS[name].iG++; if (won) cardWS[name].iW++;
-          } else if (log.type === 'CARD_PLAYED') {
+          } else if (entry.type === 'CARD_PLAYED') {
             playStats[name] = (playStats[name] || 0) + 1;
             cardWS[name].pG++; if (won) cardWS[name].pW++;
           }
         });
       });
-      setStatus((Math.min(i + 5, ids.length)) + ' / ' + ids.length + ' parties analysées…');
+
+      setStatus((Math.min(i + 5, gameList.length)) + ' / ' + gameList.length + ' parties analysées…');
     }
 
     if (processed === 0) {
-      setStatus('Aucune partie strictement ' + COLORS[c1].name + ' / ' + COLORS[c2].name + ' trouvée.');
+      setStatus('Aucune partie analysée pour ' + COLORS[c1].name + ' / ' + COLORS[c2].name + '.');
       return;
     }
 
@@ -241,19 +275,4 @@
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
     PAIRS.forEach(function(p) {
       var c1 = p[0], c2 = p[1];
-      html += '<button class="lrc-pair-btn" data-c1="' + c1 + '" data-c2="' + c2 + '" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;cursor:pointer;text-align:left;font-size:12px;display:flex;align-items:center;gap:8px">'
-        + dot(c1) + dot(c2)
-        + '<span>' + COLORS[c1].name + ' / ' + COLORS[c2].name + '</span>'
-        + '</button>';
-    });
-    html += '</div>';
-    body.innerHTML = html;
-    body.querySelectorAll('.lrc-pair-btn').forEach(function(btn) {
-      btn.onmouseenter = function(){ this.style.borderColor = '#3498DB'; };
-      btn.onmouseleave = function(){ this.style.borderColor = '#30363d'; };
-      btn.onclick = function() { analyse(this.getAttribute('data-c1'), this.getAttribute('data-c2')); };
-    });
-  }
-
-  showPairSelector();
-})();
+      html += '<button class="lrc-pair-btn" data-c1="' + c1 + '" data-c2="' + c2 + '" style="background:#
