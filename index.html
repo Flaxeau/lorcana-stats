@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lorcana Stats — Statistiques Duels.ink</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --ruby: #e74c3c;
+    --sapphire: #3498db;
+    --green: #3fb950;
+    --amber: #e8a30a;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* NAV */
+  nav { border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; gap: 10px; }
+  .nav-logo { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  .gem { display: inline-block; width: 11px; height: 11px; border-radius: 2px; transform: rotate(45deg); }
+  .gem-r { background: var(--ruby); }
+  .gem-s { background: var(--sapphire); }
+  .nav-badge { font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; color: var(--muted); }
+
+  /* HERO */
+  .hero { text-align: center; padding: 72px 24px 56px; max-width: 680px; margin: 0 auto; }
+  .hero h1 { font-size: 42px; font-weight: 700; line-height: 1.15; letter-spacing: -1px; margin-bottom: 18px; }
+  .hero h1 span { background: linear-gradient(90deg, var(--ruby), var(--sapphire)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero p { font-size: 17px; color: var(--muted); line-height: 1.7; margin-bottom: 36px; }
+
+  /* BOOKMARKLET BUTTON */
+  .bm-area { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 48px; }
+  .bm-label { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 14px; }
+  .bm-drag-zone { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+  .bm-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--ruby), #c0392b);
+    color: #fff; font-weight: 600; font-size: 15px;
+    padding: 12px 22px; border-radius: 10px; border: none;
+    cursor: grab; user-select: none; text-decoration: none;
+    box-shadow: 0 2px 8px rgba(231,76,60,.35);
+    transition: transform .1s, box-shadow .1s;
+  }
+  .bm-btn:active { cursor: grabbing; transform: scale(.97); }
+  .bm-btn:hover { box-shadow: 0 4px 16px rgba(231,76,60,.45); }
+  .bm-hint { font-size: 13px; color: var(--muted); }
+  .arrow { font-size: 22px; }
+
+  /* STEPS */
+  .steps { max-width: 680px; margin: 0 auto 64px; padding: 0 24px; }
+  .steps h2 { font-size: 22px; font-weight: 600; margin-bottom: 24px; }
+  .step { display: flex; gap: 18px; margin-bottom: 24px; }
+  .step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+  .step-content h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .step-content p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* FEATURES */
+  .features { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 48px 24px; margin-bottom: 48px; }
+  .features-inner { max-width: 680px; margin: 0 auto; }
+  .features h2 { font-size: 22px; font-weight: 600; margin-bottom: 24px; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .feat { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .feat-icon { font-size: 22px; margin-bottom: 8px; }
+  .feat h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .feat p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* COLORS PREVIEW */
+  .colors-section { max-width: 680px; margin: 0 auto 64px; padding: 0 24px; }
+  .colors-section h2 { font-size: 22px; font-weight: 600; margin-bottom: 16px; }
+  .colors-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .color-pill { display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 13px; }
+  .color-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 32px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+  footer a { color: var(--muted); text-decoration: underline; }
+
+  /* COMPAT note */
+  .compat { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 14px; justify-content: center; }
+  .compat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <span class="gem gem-r"></span>
+    <span class="gem gem-s"></span>
+    Lorcana Stats
+  </div>
+  <span class="nav-badge">Outil non-officiel · Duels.ink</span>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>Tes stats Lorcana,<br><span>par bicolorité</span></h1>
+  <p>Analyse tes parties sur Duels.ink et découvre quelles cartes tu encres, quelles cartes tu joues, et ton winrate pour chaque combinaison de couleurs.</p>
+
+  <div class="bm-area">
+    <div class="bm-label">① Glisse ce bouton dans ta barre de favoris</div>
+    <div class="bm-drag-zone">
+      <a id="bm-link" class="bm-btn" href="#">
+        📊 Lorcana Stats
+      </a>
+      <span class="arrow">→</span>
+      <span class="bm-hint">Glisse jusqu'ici<br><small style="opacity:.6">dans ta barre de favoris</small></span>
+    </div>
+    <div class="compat">
+      <span class="compat-dot"></span>
+      Compatible Chrome, Firefox, Edge, Safari
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section class="steps">
+  <h2>Comment ça marche</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h3>Glisse le bouton dans tes favoris</h3>
+      <p>Clique et glisse le bouton « 📊 Lorcana Stats » vers ta barre de favoris. C'est tout — pas besoin de l'installer.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h3>Va sur Duels.ink et connecte-toi</h3>
+      <p>Ouvre <a href="https://duels.ink" target="_blank" rel="noopener" style="color: var(--sapphire)">duels.ink</a> dans ton navigateur et connecte-toi à ton compte.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h3>Clique sur le favori</h3>
+      <p>Un panneau s'ouvre à droite de la page. Choisis une bicolorité et l'outil analyse automatiquement toutes tes parties — encrages, jeux de cartes, winrate par carte.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="features-inner">
+    <h2>Ce que tu vois</h2>
+    <div class="features-grid">
+      <div class="feat">
+        <div class="feat-icon">🎨</div>
+        <h4>15 bicolorités</h4>
+        <p>Toutes les combinaisons de 2 couleurs parmi les 6 de Lorcana.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">💧</div>
+        <h4>Stats d'encrage</h4>
+        <p>Quelles cartes tu encres le plus souvent, et ton taux d'encrage par carte.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🃏</div>
+        <h4>Stats de jeu</h4>
+        <p>Fréquence de jeu de chaque carte sur toutes tes parties.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🏆</div>
+        <h4>Winrate par carte</h4>
+        <p>Ton taux de victoire dans les parties où tu as joué ou encré chaque carte.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔒</div>
+        <h4>100% privé</h4>
+        <p>Aucune donnée ne quitte ton navigateur. Tout est calculé localement.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">⚡</div>
+        <h4>Analyse complète</h4>
+        <p>Filtre automatiquement les decks strictement bicolores — pas de 3e couleur parasite.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COLORS -->
+<section class="colors-section">
+  <h2>Bicolorités disponibles</h2>
+  <div class="colors-grid">
+    <div class="color-pill"><span class="color-dot" style="background:#E8A30A"></span><span class="color-dot" style="background:#9B59B6"></span> Ambre / Améthyste</div>
+    <div class="color-pill"><span class="color-dot" style="background:#E8A30A"></span><span class="color-dot" style="background:#27AE60"></span> Ambre / Émeraude</div>
+    <div class="color-pill"><span class="color-dot" style="background:#E8A30A"></span><span class="color-dot" style="background:#E74C3C"></span> Ambre / Ruby</div>
+    <div class="color-pill"><span class="color-dot" style="background:#E8A30A"></span><span class="color-dot" style="background:#3498DB"></span> Ambre / Saphir</div>
+    <div class="color-pill"><span class="color-dot" style="background:#E8A30A"></span><span class="color-dot" style="background:#7F8C8D"></span> Ambre / Acier</div>
+    <div class="color-pill"><span class="color-dot" style="background:#9B59B6"></span><span class="color-dot" style="background:#27AE60"></span> Améthyste / Émeraude</div>
+    <div class="color-pill"><span class="color-dot" style="background:#9B59B6"></span><span class="color-dot" style="background:#E74C3C"></span> Améthyste / Ruby</div>
+    <div class="color-pill"><span class="color-dot" style="background:#9B59B6"></span><span class="color-dot" style="background:#3498DB"></span> Améthyste / Saphir</div>
+    <div class="color-pill"><span class="color-dot" style="background:#9B59B6"></span><span class="color-dot" style="background:#7F8C8D"></span> Améthyste / Acier</div>
+    <div class="color-pill"><span class="color-dot" style="background:#27AE60"></span><span class="color-dot" style="background:#E74C3C"></span> Émeraude / Ruby</div>
+    <div class="color-pill"><span class="color-dot" style="background:#27AE60"></span><span class="color-dot" style="background:#3498DB"></span> Émeraude / Saphir</div>
+    <div class="color-pill"><span class="color-dot" style="background:#27AE60"></span><span class="color-dot" style="background:#7F8C8D"></span> Émeraude / Acier</div>
+    <div class="color-pill" style="border-color:#3498DB"><span class="color-dot" style="background:#E74C3C"></span><span class="color-dot" style="background:#3498DB"></span> Ruby / Saphir</div>
+    <div class="color-pill"><span class="color-dot" style="background:#E74C3C"></span><span class="color-dot" style="background:#7F8C8D"></span> Ruby / Acier</div>
+    <div class="color-pill"><span class="color-dot" style="background:#3498DB"></span><span class="color-dot" style="background:#7F8C8D"></span> Saphir / Acier</div>
+  </div>
+</section>
+
+<footer>
+  Outil non-officiel, non affilié à Ravensburger ou Disney ·
+  Données issues de <a href="https://duels.ink" target="_blank" rel="noopener">duels.ink</a> ·
+  Code source : <a href="https://github.com/Flaxeau/lorcana-stats" target="_blank" rel="noopener">GitHub</a>
+</footer>
+
+<script>
+  // Construit le href du bookmarklet dynamiquement depuis le script hébergé
+  var SCRIPT_URL = 'https://flaxeau.github.io/lorcana-stats/bookmarklet.js';
+  var bm = 'javascript:(function(){var s=document.createElement(\'script\');s.src=\'' + SCRIPT_URL + '?v=\'+Date.now();document.head.appendChild(s);})();';
+  document.getElementById('bm-link').href = bm;
+</script>
+</body>
+</html>
