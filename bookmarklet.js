@@ -10,12 +10,12 @@
   if (existing) { existing.remove(); return; }
 
   var COLORS = {
-    amber:    { name: 'Ambre',      hex: '#E8A30A', api: 'Amber' },
-    amethyst: { name: 'Améthyste', hex: '#9B59B6', api: 'Amethyst' },
-    emerald:  { name: 'Émeraude',  hex: '#27AE60', api: 'Emerald' },
-    ruby:     { name: 'Ruby',       hex: '#E74C3C', api: 'Ruby' },
-    sapphire: { name: 'Saphir',     hex: '#3498DB', api: 'Sapphire' },
-    steel:    { name: 'Acier',      hex: '#7F8C8D', api: 'Steel' },
+    amber:    { name: 'Ambre',     hex: '#E8A30A', api: 'Amber' },
+    amethyst: { name: 'Amethyste',hex: '#9B59B6', api: 'Amethyst' },
+    emerald:  { name: 'Emeraude', hex: '#27AE60', api: 'Emerald' },
+    ruby:     { name: 'Ruby',      hex: '#E74C3C', api: 'Ruby' },
+    sapphire: { name: 'Saphir',    hex: '#3498DB', api: 'Sapphire' },
+    steel:    { name: 'Acier',     hex: '#7F8C8D', api: 'Steel' },
   };
   var COLOR_KEYS = Object.keys(COLORS);
   var PAIRS = [];
@@ -23,7 +23,6 @@
     for (var j = i + 1; j < COLOR_KEYS.length; j++)
       PAIRS.push([COLOR_KEYS[i], COLOR_KEYS[j]]);
 
-  // Build the "Color1/Color2" string that Duels.ink uses in your_deck_colors
   function deckColorsKey(c1, c2) {
     var names = [COLORS[c1].api, COLORS[c2].api].slice().sort();
     return names[0] + '/' + names[1];
@@ -34,7 +33,6 @@
       + COLORS[color].hex + ';vertical-align:middle;margin-right:3px"></span>';
   }
 
-  // Decompress a gzip blob and return parsed JSON
   async function decompressGzip(blob) {
     try {
       var ds = new DecompressionStream('gzip');
@@ -54,7 +52,6 @@
     } catch(e) { return null; }
   }
 
-  // Fetch gamelog from CDN URL and return parsed object
   async function fetchGamelog(url) {
     try {
       var resp = await fetch(url);
@@ -63,52 +60,35 @@
     } catch(e) { return null; }
   }
 
-  // Load all matching game IDs from the match-history API (with pagination)
   async function loadMatchingGames(c1, c2) {
     var targetColors = deckColorsKey(c1, c2);
     var allGames = [];
     var cursor = null;
-
     while (true) {
       var url = '/api/me/match-history?format=json&limit=1000&source=matchmaking';
       if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
-
       var resp = await fetch(url);
       if (!resp.ok) break;
       var data = await resp.json();
       var games = data.games || [];
-
       games.forEach(function(g) {
-        if (g.your_deck_colors === targetColors) {
-          allGames.push({
-            game_id: g.game_id,
-            your_player: g.your_player,
-            result: g.result,
-          });
-        }
+        if (g.your_deck_colors === targetColors)
+          allGames.push({ game_id: g.game_id, your_player: g.your_player, result: g.result });
       });
-
-      // Stop if no more pages or no games returned
       if (!data.next_cursor || games.length === 0) break;
       cursor = data.next_cursor;
     }
-
     return allGames;
   }
 
-  // ── Main analysis function ────────────────────────────────────────────────
   async function analyse(c1, c2) {
-    setStatus('Chargement de l\'historique…');
-
+    setStatus('Chargement de l\'historique...');
     var games = await loadMatchingGames(c1, c2);
     if (games.length === 0) {
-      setStatus('Aucune partie trouvée pour ' + COLORS[c1].name + ' / ' + COLORS[c2].name + '.');
+      setStatus('Aucune partie trouvee pour ' + COLORS[c1].name + ' / ' + COLORS[c2].name + '.');
       return;
     }
-
-    setStatus('Récupération de ' + games.length + ' gamelogs…');
-
-    // Fetch bulk gamelog download URLs (max 1000 per request)
+    setStatus('Recuperation de ' + games.length + ' gamelogs...');
     var allIds = games.map(function(g){ return g.game_id; });
     var manifestResp = await fetch('/api/me/bulk-gamelogs', {
       method: 'POST',
@@ -116,41 +96,31 @@
       body: JSON.stringify({ ids: allIds }),
     });
     var manifest = await manifestResp.json();
-
-    // Build lookup: game_id → { result, your_player, url }
     var gameLookup = {};
     games.forEach(function(g){ gameLookup[g.game_id] = g; });
     (manifest.files || []).forEach(function(f){ if (gameLookup[f.id]) gameLookup[f.id].url = f.url; });
-
     var gameList = games.filter(function(g){ return g.url; });
     if (gameList.length === 0) {
-      setStatus('Impossible de récupérer les gamelogs.');
+      setStatus('Impossible de recuperer les gamelogs.');
       return;
     }
-
-    // Process gamelogs in batches of 5
     var inkStats = {}, playStats = {}, cardWS = {};
     var processed = 0, wins = 0;
-
     for (var i = 0; i < gameList.length; i += 5) {
       var batch = gameList.slice(i, i + 5);
       var results = await Promise.all(batch.map(function(g){ return fetchGamelog(g.url); }));
-
       results.forEach(function(data, idx) {
         if (!data) return;
         var game = batch[idx];
-        var myPlayer = game.your_player; // integer 1 or 2
+        var myPlayer = game.your_player;
         var won = game.result === 'win';
-
         processed++;
         if (won) wins++;
-
         Object.values(data).forEach(function(entry) {
           if (entry.player !== myPlayer) return;
           var name = entry.data && entry.data.cardName;
           if (!name) return;
           if (!cardWS[name]) cardWS[name] = { iW:0, iG:0, pW:0, pG:0 };
-
           if (entry.type === 'CARD_INKED') {
             inkStats[name] = (inkStats[name] || 0) + 1;
             cardWS[name].iG++; if (won) cardWS[name].iW++;
@@ -160,15 +130,9 @@
           }
         });
       });
-
-      setStatus((Math.min(i + 5, gameList.length)) + ' / ' + gameList.length + ' parties analysées…');
+      setStatus((Math.min(i + 5, gameList.length)) + ' / ' + gameList.length + ' parties analysees...');
     }
-
-    if (processed === 0) {
-      setStatus('Aucune partie analysée pour ' + COLORS[c1].name + ' / ' + COLORS[c2].name + '.');
-      return;
-    }
-
+    if (processed === 0) { setStatus('Aucune partie analysee.'); return; }
     var all = Object.keys(Object.assign({}, inkStats, playStats));
     var rows = all.map(function(card) {
       var ink = inkStats[card] || 0, play = playStats[card] || 0;
@@ -181,18 +145,233 @@
         pG: ws.pG || 0, iG: ws.iG || 0,
       };
     }).sort(function(a, b){ return b.total - a.total; });
-
     showResults(rows, processed, wins, c1, c2);
   }
 
-  // ── Panel ─────────────────────────────────────────────────────────────────
+  // ── Export PNG ─────────────────────────────────────────────────────────
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function drawBar(ctx, x, y, w, h, val, max, color, label) {
+    var barW = w - 30;
+    var pct = max > 0 ? val / max : 0;
+    ctx.fillStyle = '#21262d';
+    roundRect(ctx, x, y + h / 2 - 3, barW, 6, 3);
+    ctx.fill();
+    if (pct > 0) {
+      ctx.fillStyle = color;
+      roundRect(ctx, x, y + h / 2 - 3, Math.max(4, barW * pct), 6, 3);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#c9d1d9';
+    ctx.font = '500 11px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(label), x + w - 2, y + h / 2 + 4);
+    ctx.textAlign = 'left';
+  }
+
+  function drawBadge(ctx, x, y, w, h, val) {
+    var bg, col;
+    if (val === null || val === undefined) {
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('-', x + w / 2, y + h / 2 + 4);
+      ctx.textAlign = 'left';
+      return;
+    }
+    if (val >= 70)      { bg = 'rgba(46,160,67,.25)';  col = '#3fb950'; }
+    else if (val >= 50) { bg = 'rgba(210,153,34,.25)'; col = '#d29922'; }
+    else                { bg = 'rgba(248,81,73,.25)';  col = '#f85149'; }
+    ctx.fillStyle = bg;
+    roundRect(ctx, x + 4, y + 2, w - 8, h - 4, 5);
+    ctx.fill();
+    ctx.fillStyle = col;
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(val + '%', x + w / 2, y + h / 2 + 4);
+    ctx.textAlign = 'left';
+  }
+
+  function exportImage(rows, games, wins, c1, c2) {
+    var DPR = 2;
+    var W = 700;
+    var COL_NAME = 16, COL_INK = 230, COL_PLAY = 370, COL_PCT = 510, COL_WR = 600;
+    var ROW_H = 28;
+    var HEADER_H = 110;
+    var STATS_H = 0;
+    var TABLE_HEAD_H = 30;
+    var FOOTER_H = 36;
+    var H = HEADER_H + STATS_H + TABLE_HEAD_H + rows.length * ROW_H + FOOTER_H;
+
+    var canvas = document.createElement('canvas');
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    var ctx = canvas.getContext('2d');
+    ctx.scale(DPR, DPR);
+
+    // Background
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, W, H);
+
+    // Header gradient band
+    var grad = ctx.createLinearGradient(0, 0, W, 0);
+    grad.addColorStop(0, COLORS[c1].hex + '33');
+    grad.addColorStop(1, COLORS[c2].hex + '33');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, HEADER_H);
+
+    // Left accent bar
+    ctx.fillStyle = COLORS[c1].hex;
+    ctx.fillRect(0, 0, 4, HEADER_H / 2);
+    ctx.fillStyle = COLORS[c2].hex;
+    ctx.fillRect(0, HEADER_H / 2, 4, HEADER_H / 2);
+
+    // Color dots
+    var dotY = 38;
+    ctx.beginPath(); ctx.arc(28, dotY, 11, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS[c1].hex; ctx.fill();
+    ctx.beginPath(); ctx.arc(50, dotY, 11, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS[c2].hex; ctx.fill();
+
+    // Title
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = 'bold 24px system-ui, sans-serif';
+    ctx.fillText(COLORS[c1].name + ' / ' + COLORS[c2].name, 72, dotY + 8);
+
+    // Subtitle
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText('Lorcana Stats  -  duels.ink', 72, dotY + 26);
+
+    // Stat pills
+    var wr = Math.round(wins / games * 100);
+    var stats = [
+      { label: 'Parties', val: String(games) },
+      { label: 'Winrate',  val: wr + '%', highlight: true },
+      { label: 'Victoires', val: String(wins) },
+      { label: 'Defaites', val: String(games - wins) },
+    ];
+    var pillW = 140, pillH = 40, pillY = HEADER_H - pillH - 12, gap = 8;
+    var startX = W - stats.length * (pillW + gap) + gap - 8;
+    stats.forEach(function(s, i) {
+      var px = startX + i * (pillW + gap);
+      ctx.fillStyle = '#161b22';
+      roundRect(ctx, px, pillY, pillW, pillH, 7);
+      ctx.fill();
+      ctx.strokeStyle = '#30363d';
+      ctx.lineWidth = 1;
+      roundRect(ctx, px, pillY, pillW, pillH, 7);
+      ctx.stroke();
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.fillText(s.label.toUpperCase(), px + 10, pillY + 14);
+      ctx.fillStyle = s.highlight
+        ? (wr >= 60 ? '#3fb950' : wr >= 50 ? '#d29922' : '#f85149')
+        : '#e6edf3';
+      ctx.font = 'bold 17px system-ui, sans-serif';
+      ctx.fillText(s.val, px + 10, pillY + 32);
+    });
+
+    // Table header
+    var ty = HEADER_H + STATS_H;
+    ctx.fillStyle = '#161b22';
+    ctx.fillRect(0, ty, W, TABLE_HEAD_H);
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, ty); ctx.lineTo(W, ty);
+    ctx.moveTo(0, ty + TABLE_HEAD_H); ctx.lineTo(W, ty + TABLE_HEAD_H);
+    ctx.stroke();
+
+    ctx.font = '600 10px system-ui, sans-serif';
+    [
+      { t: 'CARTE',   x: COL_NAME, c: '#8b949e' },
+      { t: 'ENCREE',  x: COL_INK,  c: '#E74C3C' },
+      { t: 'JOUEE',   x: COL_PLAY, c: '#3498DB' },
+      { t: '% ENC',   x: COL_PCT,  c: '#8b949e' },
+      { t: 'WR',      x: COL_WR,   c: '#8b949e' },
+    ].forEach(function(h) {
+      ctx.fillStyle = h.c;
+      ctx.fillText(h.t, h.x, ty + 19);
+    });
+
+    // Rows
+    var maxI = Math.max.apply(null, rows.map(function(r){ return r.inked; }));
+    var maxP = Math.max.apply(null, rows.map(function(r){ return r.played; }));
+
+    rows.forEach(function(r, idx) {
+      var ry = ty + TABLE_HEAD_H + idx * ROW_H;
+      ctx.fillStyle = idx % 2 === 0 ? '#0d1117' : '#0f1318';
+      ctx.fillRect(0, ry, W, ROW_H);
+
+      // Card name
+      ctx.fillStyle = '#e6edf3';
+      ctx.font = '500 12px system-ui, sans-serif';
+      var name = r.card.length > 30 ? r.card.substring(0, 29) + '.' : r.card;
+      ctx.fillText(name, COL_NAME, ry + ROW_H / 2 + 4);
+
+      // Bars
+      drawBar(ctx, COL_INK,  ry + 4, 120, ROW_H - 8, r.inked,  maxI, '#E74C3C', r.inked);
+      drawBar(ctx, COL_PLAY, ry + 4, 120, ROW_H - 8, r.played, maxP, '#3498DB', r.played);
+
+      // Badges
+      drawBadge(ctx, COL_PCT, ry + 4, 72, ROW_H - 8, r.inkRate);
+      drawBadge(ctx, COL_WR,  ry + 4, 72, ROW_H - 8, r.pWR);
+
+      // Row separator
+      ctx.strokeStyle = '#21262d';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, ry + ROW_H); ctx.lineTo(W, ry + ROW_H);
+      ctx.stroke();
+    });
+
+    // Footer
+    var fy = H - FOOTER_H;
+    ctx.fillStyle = '#161b22';
+    ctx.fillRect(0, fy, W, FOOTER_H);
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, fy); ctx.lineTo(W, fy);
+    ctx.stroke();
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.fillText('flaxeau.github.io/lorcana-stats  |  Outil non-officiel, non affilie a Ravensburger ou Disney', 16, fy + 22);
+
+    // Download
+    canvas.toBlob(function(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'lorcana-' + c1 + '-' + c2 + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  }
+
+  // ── Panel ──────────────────────────────────────────────────────────────
   var panel = document.createElement('div');
   panel.id = 'lrc-bm-panel';
   panel.style.cssText = 'position:fixed;top:0;right:0;width:480px;height:100vh;z-index:2147483647;background:#161b22;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;box-shadow:-4px 0 24px rgba(0,0,0,.6);display:flex;flex-direction:column;font-size:13px';
 
   var hdr = document.createElement('div');
   hdr.style.cssText = 'padding:14px 16px;border-bottom:1px solid #30363d;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
-  hdr.innerHTML = '<span style="font-weight:600;font-size:15px">📊 Lorcana Stats</span><button id="lrc-close" style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;line-height:1;padding:2px 4px">×</button>';
+  hdr.innerHTML = '<span style="font-weight:600;font-size:15px">📊 Lorcana Stats</span><button id="lrc-close" style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;line-height:1;padding:2px 4px">x</button>';
 
   var body = document.createElement('div');
   body.id = 'lrc-body-inner';
@@ -208,7 +387,7 @@
   }
 
   function badge(r) {
-    if (r === null || r === undefined) return '<span style="color:#8b949e">—</span>';
+    if (r === null || r === undefined) return '<span style="color:#8b949e">-</span>';
     var bg = r >= 70 ? 'rgba(46,160,67,.18)' : r >= 50 ? 'rgba(210,153,34,.18)' : 'rgba(248,81,73,.18)';
     var col = r >= 70 ? '#3fb950' : r >= 50 ? '#d29922' : '#f85149';
     return '<span style="background:' + bg + ';color:' + col + ';padding:2px 7px;border-radius:6px;font-size:11px;font-weight:600">' + r + '%</span>';
@@ -225,18 +404,19 @@
 
   function showResults(rows, games, wins, c1, c2) {
     var wr = Math.round(wins / games * 100);
-    var totalInk = rows.reduce(function(s, r){ return s + r.inked; }, 0);
+    var totalInk  = rows.reduce(function(s, r){ return s + r.inked; }, 0);
     var totalPlay = rows.reduce(function(s, r){ return s + r.played; }, 0);
     var maxI = Math.max.apply(null, rows.map(function(r){ return r.inked; }));
     var maxP = Math.max.apply(null, rows.map(function(r){ return r.played; }));
 
-    var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'
-      + '<button id="lrc-back" style="background:none;border:1px solid #30363d;border-radius:6px;color:#8b949e;padding:4px 10px;cursor:pointer;font-size:12px">← Retour</button>'
-      + '<span style="font-weight:500;font-size:14px">' + dot(c1) + COLORS[c1].name + ' / ' + dot(c2) + COLORS[c2].name + '</span>'
+    var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
+      + '<button id="lrc-back" style="background:none;border:1px solid #30363d;border-radius:6px;color:#8b949e;padding:4px 10px;cursor:pointer;font-size:12px">&larr; Retour</button>'
+      + '<span style="font-weight:500;font-size:14px;flex:1">' + dot(c1) + COLORS[c1].name + ' / ' + dot(c2) + COLORS[c2].name + '</span>'
+      + '<button id="lrc-export" style="background:#238636;border:none;border-radius:6px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">&#x2B07; Export PNG</button>'
       + '</div>';
 
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
-    [['Parties', games, ''], ['Winrate', wr + '%', wins + 'V · ' + (games - wins) + 'D'],
+    [['Parties', games, ''], ['Winrate', wr + '%', wins + 'V - ' + (games - wins) + 'D'],
      ['Encrages', totalInk, ''], ['Jeux de cartes', totalPlay, '']].forEach(function(m) {
       html += '<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px">'
         + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#8b949e;margin-bottom:3px">' + m[0] + '</div>'
@@ -249,8 +429,8 @@
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px">'
       + '<thead><tr style="border-bottom:1px solid #30363d">'
       + '<th style="text-align:left;padding:6px 4px;color:#8b949e;font-weight:500">Carte</th>'
-      + '<th style="padding:6px 4px;color:#E74C3C;font-weight:500;min-width:80px">Encrée</th>'
-      + '<th style="padding:6px 4px;color:#3498DB;font-weight:500;min-width:80px">Jouée</th>'
+      + '<th style="padding:6px 4px;color:#E74C3C;font-weight:500;min-width:80px">Encree</th>'
+      + '<th style="padding:6px 4px;color:#3498DB;font-weight:500;min-width:80px">Jouee</th>'
       + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center">%</th>'
       + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center">WR</th>'
       + '</tr></thead><tbody>';
@@ -268,10 +448,13 @@
     html += '</tbody></table>';
     body.innerHTML = html;
     document.getElementById('lrc-back').onclick = showPairSelector;
+    document.getElementById('lrc-export').onclick = function() {
+      exportImage(rows, games, wins, c1, c2);
+    };
   }
 
   function showPairSelector() {
-    var html = '<p style="color:#8b949e;margin:0 0 14px;line-height:1.6;font-size:13px">Choisis une bicolorité pour voir les stats de tes cartes encrées et jouées.</p>'
+    var html = '<p style="color:#8b949e;margin:0 0 14px;line-height:1.6;font-size:13px">Choisis une bicolorite pour voir les stats de tes cartes encrees et jouees.</p>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
     PAIRS.forEach(function(p) {
       var c1 = p[0], c2 = p[1];
