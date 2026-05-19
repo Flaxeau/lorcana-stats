@@ -275,4 +275,19 @@
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
     PAIRS.forEach(function(p) {
       var c1 = p[0], c2 = p[1];
-      html += '<button class="lrc-pair-btn" data-c1="' + c1 + '" data-c2="' + c2 + '" style="background:#
+      html += '<button class="lrc-pair-btn" data-c1="' + c1 + '" data-c2="' + c2 + '" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;cursor:pointer;text-align:left;font-size:12px;display:flex;align-items:center;gap:8px">'
+        + dot(c1) + dot(c2)
+        + '<span>' + COLORS[c1].name + ' / ' + COLORS[c2].name + '</span>'
+        + '</button>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+    body.querySelectorAll('.lrc-pair-btn').forEach(function(btn) {
+      btn.onmouseenter = function(){ this.style.borderColor = '#3498DB'; };
+      btn.onmouseleave = function(){ this.style.borderColor = '#30363d'; };
+      btn.onclick = function() { analyse(this.getAttribute('data-c1'), this.getAttribute('data-c2')); };
+    });
+  }
+
+  showPairSelector();
+})();
