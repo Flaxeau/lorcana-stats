@@ -22,11 +22,27 @@
 
   var excludeLastTurns = 0;
   var cachedAllGames = null;
+  var STORAGE_KEY = 'lrc_deck_names';
+
+  function getDeckNames() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function saveDeckName(deckId, name) {
+    try {
+      var m = getDeckNames();
+      if (name) m[deckId] = name; else delete m[deckId];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(m));
+    } catch(e) {}
+  }
 
   function dot(color) {
     if (!color || !COLORS[color]) return '';
     return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'
       + COLORS[color].hex + ';vertical-align:middle;margin-right:3px"></span>';
+  }
+
+  function shortId(deckId) {
+    return deckId ? deckId.slice(-6) : '';
   }
 
   function kofiBtn() {
@@ -90,50 +106,28 @@
       if (!data.next_cursor || games.length === 0) break;
       cursor = data.next_cursor;
     }
-    if (allGames.length > 0) {
-      console.log('[LorcanaStats] Champs du game object:', Object.keys(allGames[0]));
-      console.log('[LorcanaStats] Premier game:', JSON.stringify(allGames[0]));
-    }
     cachedAllGames = allGames;
     return allGames;
   }
 
-  async function fetchDeckNamesMap() {
-    var map = {};
-    var endpoints = ['/api/me/decks', '/api/me/deck-list', '/api/v1/me/decks'];
-    for (var i = 0; i < endpoints.length; i++) {
-      try {
-        var resp = await fetch(endpoints[i] + '?format=json&limit=200');
-        if (!resp.ok) continue;
-        var data = await resp.json();
-        console.log('[LorcanaStats] Decks endpoint ' + endpoints[i] + ':', JSON.stringify(data).substring(0, 300));
-        var arr = data.decks || data.results || data.items || (Array.isArray(data) ? data : []);
-        arr.forEach(function(d) {
-          var id = d.id || d.deck_id || d.deckId;
-          var name = d.name || d.deck_name || d.title || d.label;
-          if (id && name) map[String(id)] = name;
-        });
-        if (Object.keys(map).length > 0) break;
-      } catch(e) { console.log('[LorcanaStats] Erreur ' + endpoints[i] + ':', e.message); }
-    }
-    console.log('[LorcanaStats] Deck names map:', map);
-    return map;
-  }
-
   function groupGamesByDeck(allGames) {
+    var savedNames = getDeckNames();
     var decks = {};
     allGames.forEach(function(g) {
       var colors = g.your_deck_colors || '?';
       var deckId = g.your_deck_id || g.deck_id || null;
-      var deckName = g._resolvedDeckName || g.your_deck_name || g.deck_name || null;
-      var key = deckId ? (colors + '|' + deckId) : colors;
+      var key = deckId || colors;
       if (!decks[key]) {
-        decks[key] = { key: key, colors: colors, deckId: deckId, name: deckName, gameList: [], wins: 0 };
+        decks[key] = { key: key, colors: colors, deckId: deckId, gameList: [], wins: 0 };
       }
       decks[key].gameList.push({ game_id: g.game_id, your_player: g.your_player, result: g.result });
       if (g.result === 'win') decks[key].wins++;
     });
-    return Object.values(decks).sort(function(a, b) { return b.gameList.length - a.gameList.length; });
+    var arr = Object.values(decks).sort(function(a, b) { return b.gameList.length - a.gameList.length; });
+    arr.forEach(function(d) {
+      d.customName = d.deckId ? (savedNames[d.deckId] || null) : null;
+    });
+    return arr;
   }
 
   async function analyse(gameList, c1, c2, deckLabel) {
@@ -276,11 +270,9 @@
     var ctx = canvas.getContext('2d');
     ctx.scale(DPR, DPR);
 
-    // Background
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 0, W, H);
 
-    // Header gradient
     var col1hex = hasColors ? COLORS[c1].hex : '#58a6ff';
     var col2hex = hasColors ? COLORS[c2].hex : '#3fb950';
     var grad = ctx.createLinearGradient(0, 0, W, 0);
@@ -289,7 +281,6 @@
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, HEADER_H);
 
-    // Accent bars
     ctx.fillStyle = col1hex; ctx.fillRect(0, 0, 4, HEADER_H / 2);
     ctx.fillStyle = col2hex; ctx.fillRect(0, HEADER_H / 2, 4, HEADER_H / 2);
 
@@ -300,16 +291,21 @@
       ctx.fillStyle = COLORS[c2].hex; ctx.fill();
     }
 
-    // Title
     var titleStr = hasColors ? (COLORS[c1].name + ' / ' + COLORS[c2].name) : (deckLabel || 'Deck');
     ctx.fillStyle = '#e6edf3';
     ctx.font = 'bold 24px system-ui, sans-serif';
     ctx.fillText(titleStr, hasColors ? 72 : 16, 46);
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.fillText('Lorcana Stats  -  duels.ink', hasColors ? 72 : 16, 64);
+    if (deckLabel && hasColors) {
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.fillText(deckLabel, 72, 66);
+      ctx.fillText('Lorcana Stats  -  duels.ink', 72, 82);
+    } else {
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillText('Lorcana Stats  -  duels.ink', hasColors ? 72 : 16, 64);
+    }
 
-    // Stat pills
     var wr = Math.round(wins / games * 100);
     var stats = [
       { l: 'Parties',   v: String(games) },
@@ -332,7 +328,6 @@
       ctx.fillText(s.v, px + 10, pillY + 32);
     });
 
-    // Table header
     var ty = HEADER_H;
     ctx.fillStyle = '#161b22'; ctx.fillRect(0, ty, W, TABLE_HEAD_H);
     ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
@@ -352,7 +347,6 @@
       ctx.fillText(h.t, h.x, ty + 19);
     });
 
-    // Rows
     var maxI = Math.max.apply(null, rows.map(function(r){ return r.inked; }));
     var maxP = Math.max.apply(null, rows.map(function(r){ return r.played; }));
     rows.forEach(function(r, idx) {
@@ -372,13 +366,11 @@
       ctx.stroke();
     });
 
-    // Legend line
     var legendY = H - FOOTER_H - 12;
     ctx.fillStyle = '#8b949e';
     ctx.font = '10px system-ui, sans-serif';
     ctx.fillText('% enc. = encree / (encree + jouee)   |   WR joue = winrate dans les parties ou la carte a ete jouee', 16, legendY);
 
-    // Footer
     var fy = H - FOOTER_H;
     ctx.fillStyle = '#161b22'; ctx.fillRect(0, fy, W, FOOTER_H);
     ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
@@ -386,7 +378,6 @@
     ctx.fillStyle = '#8b949e'; ctx.font = '11px system-ui, sans-serif';
     ctx.fillText('flaxeau.github.io/lorcana-stats  |  Outil non-officiel, non affilie a Ravensburger ou Disney', 16, fy + 22);
 
-    // Download
     canvas.toBlob(function(blob) {
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
@@ -457,6 +448,10 @@
       + (filterTurns > 0 ? '<span style="background:#1f3a4a;color:#58a6ff;border-radius:5px;padding:3px 8px;font-size:11px;margin-left:4px">-' + filterTurns + ' dernier' + (filterTurns > 1 ? 's' : '') + ' tour' + (filterTurns > 1 ? 's' : '') + '</span>' : '')
       + '</div>';
 
+    if (deckLabel) {
+      html += '<div style="font-size:12px;color:#8b949e;margin-bottom:10px;margin-top:-8px">' + deckLabel + '</div>';
+    }
+
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
     [['Parties', games, ''], ['Winrate', wr + '%', wins + 'V - ' + (games - wins) + 'D'],
      ['Encrages', totalInk, ''], ['Jeux de cartes', totalPlay, '']].forEach(function(m) {
@@ -468,7 +463,6 @@
     });
     html += '</div>';
 
-    // Legend
     html += '<div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:#8b949e;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:6px 10px;flex-wrap:wrap">'
       + '<span><span style="color:#E74C3C;font-weight:600">Encree</span> = fois encree</span>'
       + '<span><span style="color:#3498DB;font-weight:600">Jouee</span> = fois jouee</span>'
@@ -507,12 +501,6 @@
   async function showDeckSelector() {
     if (!cachedAllGames) setStatus('Chargement de l\'historique...');
     var allGames = await fetchAllMatchHistory();
-    var deckNamesMap = await fetchDeckNamesMap();
-    // Inject names into game objects if we have a deck_id
-    allGames.forEach(function(g) {
-      var did = String(g.your_deck_id || g.deck_id || '');
-      if (did && deckNamesMap[did]) g._resolvedDeckName = deckNamesMap[did];
-    });
     var decks = groupGamesByDeck(allGames);
 
     if (decks.length === 0) {
@@ -532,14 +520,23 @@
         var k = API_TO_KEY[c.trim()];
         return k ? COLORS[k].name : c;
       }).join(' / ');
-      var displayName = deck.name ? (deck.name + ' (' + colorLabel + ')') : colorLabel;
-      html += '<button class="lrc-deck-btn" data-key="' + deck.key + '"'
-        + ' style="background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;cursor:pointer;text-align:left;font-size:12px;display:flex;align-items:center;gap:8px;width:100%">'
+      var displayName = deck.customName || colorLabel;
+      var subLabel = deck.customName ? colorLabel : (deck.deckId ? ('[' + shortId(deck.deckId) + ']') : '');
+
+      html += '<div style="display:flex;align-items:stretch;gap:4px">'
+        + '<button class="lrc-deck-btn" data-key="' + deck.key + '"'
+        + ' style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;cursor:pointer;text-align:left;font-size:12px;display:flex;align-items:center;gap:8px">'
         + colorDots
-        + '<span style="flex:1;font-weight:500">' + displayName + '</span>'
-        + '<span style="color:#8b949e;font-size:11px">' + deck.gameList.length + ' parties</span>'
-        + '<span style="color:' + (wr >= 50 ? '#3fb950' : '#f85149') + ';font-size:11px;font-weight:600;margin-left:6px">WR ' + wr + '%</span>'
-        + '</button>';
+        + '<span style="flex:1">'
+        + '<span style="font-weight:500;display:block">' + displayName + '</span>'
+        + (subLabel ? '<span style="font-size:10px;color:#8b949e">' + subLabel + '</span>' : '')
+        + '</span>'
+        + '<span style="color:#8b949e;font-size:11px;white-space:nowrap">' + deck.gameList.length + ' parties</span>'
+        + '<span style="color:' + (wr >= 50 ? '#3fb950' : '#f85149') + ';font-size:11px;font-weight:600;margin-left:6px;white-space:nowrap">WR ' + wr + '%</span>'
+        + '</button>'
+        + (deck.deckId ? '<button class="lrc-rename-btn" data-deckid="' + deck.deckId + '" data-current="' + (deck.customName || '') + '"'
+          + ' style="background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#8b949e;padding:0 10px;cursor:pointer;font-size:14px" title="Renommer ce deck">&#x270F;</button>' : '')
+        + '</div>';
     });
 
     html += '</div>';
@@ -556,6 +553,19 @@
       };
     });
 
+    body.querySelectorAll('.lrc-rename-btn').forEach(function(btn) {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        var deckId = this.getAttribute('data-deckid');
+        var current = this.getAttribute('data-current');
+        var newName = prompt('Nom pour ce deck (laisser vide pour effacer) :', current);
+        if (newName === null) return;
+        saveDeckName(deckId, newName.trim());
+        cachedAllGames = null;
+        showDeckSelector();
+      };
+    });
+
     body.querySelectorAll('.lrc-deck-btn').forEach(function(btn) {
       btn.onmouseenter = function(){ this.style.borderColor = '#3498DB'; };
       btn.onmouseleave = function(){ this.style.borderColor = '#30363d'; };
@@ -566,7 +576,7 @@
         var parts = deck.colors.split('/');
         var c1 = API_TO_KEY[parts[0] ? parts[0].trim() : ''] || null;
         var c2 = API_TO_KEY[parts[1] ? parts[1].trim() : ''] || null;
-        var deckLabel = deck.name || deck.colors;
+        var deckLabel = deck.customName || null;
         analyse(deck.gameList, c1, c2, deckLabel);
       };
     });
