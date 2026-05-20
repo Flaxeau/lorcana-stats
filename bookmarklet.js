@@ -23,6 +23,8 @@
     for (var j = i + 1; j < COLOR_KEYS.length; j++)
       PAIRS.push([COLOR_KEYS[i], COLOR_KEYS[j]]);
 
+  var excludeLastTurns = 0;
+
   function deckColorsKey(c1, c2) {
     var names = [COLORS[c1].api, COLORS[c2].api].slice().sort();
     return names[0] + '/' + names[1];
@@ -116,8 +118,12 @@
         var won = game.result === 'win';
         processed++;
         if (won) wins++;
+        var maxTurn = 0;
+        Object.values(data).forEach(function(e) { if ((e.turnNumber || 0) > maxTurn) maxTurn = e.turnNumber || 0; });
+        var turnCutoff = maxTurn - excludeLastTurns;
         Object.values(data).forEach(function(entry) {
           if (entry.player !== myPlayer) return;
+          if (excludeLastTurns > 0 && (entry.turnNumber || 0) > turnCutoff) return;
           var name = entry.data && entry.data.cardName;
           if (!name) return;
           if (!cardWS[name]) cardWS[name] = { iW:0, iG:0, pW:0, pG:0 };
@@ -145,7 +151,7 @@
         pG: ws.pG || 0, iG: ws.iG || 0,
       };
     }).sort(function(a, b){ return b.total - a.total; });
-    showResults(rows, processed, wins, c1, c2);
+    showResults(rows, processed, wins, c1, c2, excludeLastTurns);
   }
 
   // ── Export PNG ─────────────────────────────────────────────────────────
@@ -376,7 +382,7 @@
       + '</div>';
   }
 
-  function showResults(rows, games, wins, c1, c2) {
+  function showResults(rows, games, wins, c1, c2, filterTurns) {
     var wr = Math.round(wins / games * 100);
     var totalInk  = rows.reduce(function(s, r){ return s + r.inked; }, 0);
     var totalPlay = rows.reduce(function(s, r){ return s + r.played; }, 0);
@@ -387,6 +393,7 @@
       + '<button id="lrc-back" style="background:none;border:1px solid #30363d;border-radius:6px;color:#8b949e;padding:4px 10px;cursor:pointer;font-size:12px">&larr; Retour</button>'
       + '<span style="font-weight:500;font-size:14px;flex:1">' + dot(c1) + COLORS[c1].name + ' / ' + dot(c2) + COLORS[c2].name + '</span>'
       + '<button id="lrc-export" style="background:#238636;border:none;border-radius:6px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">&#x2B07; Export PNG</button>'
+      + (filterTurns > 0 ? '<span style="background:#1f3a4a;color:#58a6ff;border-radius:5px;padding:3px 8px;font-size:11px;margin-left:4px">-' + filterTurns + ' dernier' + (filterTurns > 1 ? 's' : '') + ' tour' + (filterTurns > 1 ? 's' : '') + '</span>' : '')
       + '</div>';
 
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
@@ -437,7 +444,16 @@
   }
 
   function showPairSelector() {
-    var html = '<p style="color:#8b949e;margin:0 0 14px;line-height:1.6;font-size:13px">Choisis une bicolorite pour voir les stats de tes cartes encrees et jouees.</p>'
+    var filterHtml = '<div style="margin-bottom:14px">'
+      + '<div style="font-size:11px;color:#8b949e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Filtre tours finaux</div>'
+      + '<div style="display:flex;gap:6px">';
+    [['Tous les tours', 0], ['-1 dernier tour', 1], ['-2 derniers tours', 2]].forEach(function(opt) {
+      var active = excludeLastTurns === opt[1];
+      filterHtml += '<button class="lrc-filter-btn" data-val="' + opt[1] + '" style="flex:1;padding:5px 4px;font-size:11px;border-radius:6px;cursor:pointer;border:1px solid ' + (active ? '#58a6ff' : '#30363d') + ';background:' + (active ? '#1f3a4a' : '#0d1117') + ';color:' + (active ? '#58a6ff' : '#8b949e') + '">' + opt[0] + '</button>';
+    });
+    filterHtml += '</div></div>';
+    var html = filterHtml
+      + '<p style="color:#8b949e;margin:0 0 14px;line-height:1.6;font-size:13px">Choisis une bicolorite pour voir les stats de tes cartes encrees et jouees.</p>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
     PAIRS.forEach(function(p) {
       var c1 = p[0], c2 = p[1];
@@ -449,6 +465,12 @@
     html += '</div>';
     html += '<div style="margin-top:20px;text-align:center;padding-top:14px;border-top:1px solid #30363d">' + '<a href="https://ko-fi.com/flaxeau" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#FF5E5B;color:#fff;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">&#x2615; Soutenir le projet</a>' + '<div style="font-size:10px;color:#8b949e;margin-top:6px">Outil gratuit et open source</div>' + '</div>';
     body.innerHTML = html;
+    body.querySelectorAll('.lrc-filter-btn').forEach(function(btn) {
+      btn.onclick = function() {
+        excludeLastTurns = parseInt(this.getAttribute('data-val'));
+        showPairSelector();
+      };
+    });
     body.querySelectorAll('.lrc-pair-btn').forEach(function(btn) {
       btn.onmouseenter = function(){ this.style.borderColor = '#3498DB'; };
       btn.onmouseleave = function(){ this.style.borderColor = '#30363d'; };
