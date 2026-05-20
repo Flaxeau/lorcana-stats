@@ -17,22 +17,35 @@
     sapphire: { name: 'Saphir',    hex: '#3498DB', api: 'Sapphire' },
     steel:    { name: 'Acier',     hex: '#7F8C8D', api: 'Steel' },
   };
-  var COLOR_KEYS = Object.keys(COLORS);
-  var PAIRS = [];
-  for (var i = 0; i < COLOR_KEYS.length; i++)
-    for (var j = i + 1; j < COLOR_KEYS.length; j++)
-      PAIRS.push([COLOR_KEYS[i], COLOR_KEYS[j]]);
+  var API_TO_KEY = {};
+  Object.keys(COLORS).forEach(function(k) { API_TO_KEY[COLORS[k].api] = k; });
 
   var excludeLastTurns = 0;
-
-  function deckColorsKey(c1, c2) {
-    var names = [COLORS[c1].api, COLORS[c2].api].slice().sort();
-    return names[0] + '/' + names[1];
-  }
+  var cachedAllGames = null;
 
   function dot(color) {
+    if (!color || !COLORS[color]) return '';
     return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'
       + COLORS[color].hex + ';vertical-align:middle;margin-right:3px"></span>';
+  }
+
+  function kofiBtn() {
+    return '<div style="margin-top:20px;text-align:center;padding-top:14px;border-top:1px solid #30363d">'
+      + '<a href="https://ko-fi.com/flaxeau" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#FF5E5B;color:#fff;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">&#x2615; Soutenir le projet</a>'
+      + '<div style="font-size:10px;color:#8b949e;margin-top:6px">Outil gratuit et open source</div>'
+      + '</div>';
+  }
+
+  function filterHtmlFn() {
+    var html = '<div style="margin-bottom:14px">'
+      + '<div style="font-size:11px;color:#8b949e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Filtre tours finaux</div>'
+      + '<div style="display:flex;gap:6px">';
+    [['Tous les tours', 0], ['-1 dernier tour', 1], ['-2 derniers tours', 2]].forEach(function(opt) {
+      var active = excludeLastTurns === opt[1];
+      html += '<button class="lrc-filter-btn" data-val="' + opt[1] + '" style="flex:1;padding:5px 4px;font-size:11px;border-radius:6px;cursor:pointer;border:1px solid ' + (active ? '#58a6ff' : '#30363d') + ';background:' + (active ? '#1f3a4a' : '#0d1117') + ';color:' + (active ? '#58a6ff' : '#8b949e') + '">' + opt[0] + '</button>';
+    });
+    html += '</div></div>';
+    return html;
   }
 
   async function decompressGzip(blob) {
@@ -62,8 +75,8 @@
     } catch(e) { return null; }
   }
 
-  async function loadMatchingGames(c1, c2) {
-    var targetColors = deckColorsKey(c1, c2);
+  async function fetchAllMatchHistory() {
+    if (cachedAllGames) return cachedAllGames;
     var allGames = [];
     var cursor = null;
     while (true) {
@@ -73,25 +86,33 @@
       if (!resp.ok) break;
       var data = await resp.json();
       var games = data.games || [];
-      games.forEach(function(g) {
-        if (g.your_deck_colors === targetColors)
-          allGames.push({ game_id: g.game_id, your_player: g.your_player, result: g.result });
-      });
+      allGames = allGames.concat(games);
       if (!data.next_cursor || games.length === 0) break;
       cursor = data.next_cursor;
     }
+    cachedAllGames = allGames;
     return allGames;
   }
 
-  async function analyse(c1, c2) {
-    setStatus('Chargement de l\'historique...');
-    var games = await loadMatchingGames(c1, c2);
-    if (games.length === 0) {
-      setStatus('Aucune partie trouvee pour ' + COLORS[c1].name + ' / ' + COLORS[c2].name + '.');
-      return;
-    }
-    setStatus('Recuperation de ' + games.length + ' gamelogs...');
-    var allIds = games.map(function(g){ return g.game_id; });
+  function groupGamesByDeck(allGames) {
+    var decks = {};
+    allGames.forEach(function(g) {
+      var colors = g.your_deck_colors || '?';
+      var deckId = g.your_deck_id || g.deck_id || null;
+      var deckName = g.your_deck_name || g.deck_name || null;
+      var key = deckId ? (colors + '|' + deckId) : colors;
+      if (!decks[key]) {
+        decks[key] = { key: key, colors: colors, deckId: deckId, name: deckName, gameList: [], wins: 0 };
+      }
+      decks[key].gameList.push({ game_id: g.game_id, your_player: g.your_player, result: g.result });
+      if (g.result === 'win') decks[key].wins++;
+    });
+    return Object.values(decks).sort(function(a, b) { return b.gameList.length - a.gameList.length; });
+  }
+
+  async function analyse(gameList, c1, c2, deckLabel) {
+    setStatus('Recuperation de ' + gameList.length + ' gamelogs...');
+    var allIds = gameList.map(function(g){ return g.game_id; });
     var manifestResp = await fetch('/api/me/bulk-gamelogs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -99,17 +120,17 @@
     });
     var manifest = await manifestResp.json();
     var gameLookup = {};
-    games.forEach(function(g){ gameLookup[g.game_id] = g; });
+    gameList.forEach(function(g){ gameLookup[g.game_id] = g; });
     (manifest.files || []).forEach(function(f){ if (gameLookup[f.id]) gameLookup[f.id].url = f.url; });
-    var gameList = games.filter(function(g){ return g.url; });
-    if (gameList.length === 0) {
+    var gameListWithUrl = gameList.filter(function(g){ return g.url; });
+    if (gameListWithUrl.length === 0) {
       setStatus('Impossible de recuperer les gamelogs.');
       return;
     }
     var inkStats = {}, playStats = {}, cardWS = {};
     var processed = 0, wins = 0;
-    for (var i = 0; i < gameList.length; i += 5) {
-      var batch = gameList.slice(i, i + 5);
+    for (var i = 0; i < gameListWithUrl.length; i += 5) {
+      var batch = gameListWithUrl.slice(i, i + 5);
       var results = await Promise.all(batch.map(function(g){ return fetchGamelog(g.url); }));
       results.forEach(function(data, idx) {
         if (!data) return;
@@ -141,7 +162,7 @@
           }
         });
       });
-      setStatus((Math.min(i + 5, gameList.length)) + ' / ' + gameList.length + ' parties analysees...');
+      setStatus((Math.min(i + 5, gameListWithUrl.length)) + ' / ' + gameListWithUrl.length + ' parties analysees...');
     }
     if (processed === 0) { setStatus('Aucune partie analysee.'); return; }
     var all = Object.keys(Object.assign({}, inkStats, playStats));
@@ -156,7 +177,7 @@
         pG: ws.pG || 0, iG: ws.iG || 0,
       };
     }).sort(function(a, b){ return b.total - a.total; });
-    showResults(rows, processed, wins, c1, c2, excludeLastTurns);
+    showResults(rows, processed, wins, c1, c2, excludeLastTurns, deckLabel);
   }
 
   // ── Export PNG ─────────────────────────────────────────────────────────
@@ -215,7 +236,8 @@
     ctx.textAlign = 'left';
   }
 
-  function exportImage(rows, games, wins, c1, c2) {
+  function exportImage(rows, games, wins, c1, c2, deckLabel) {
+    var hasColors = c1 && c2 && COLORS[c1] && COLORS[c2];
     var DPR = 2;
     var W = 700;
     var COL_NAME = 16, COL_INK = 230, COL_PLAY = 370, COL_PCT = 510, COL_WR = 600;
@@ -233,31 +255,33 @@
     ctx.fillRect(0, 0, W, H);
 
     // Header gradient
+    var col1hex = hasColors ? COLORS[c1].hex : '#58a6ff';
+    var col2hex = hasColors ? COLORS[c2].hex : '#3fb950';
     var grad = ctx.createLinearGradient(0, 0, W, 0);
-    grad.addColorStop(0, COLORS[c1].hex + '33');
-    grad.addColorStop(1, COLORS[c2].hex + '33');
+    grad.addColorStop(0, col1hex + '33');
+    grad.addColorStop(1, col2hex + '33');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, HEADER_H);
 
     // Accent bars
-    ctx.fillStyle = COLORS[c1].hex;
-    ctx.fillRect(0, 0, 4, HEADER_H / 2);
-    ctx.fillStyle = COLORS[c2].hex;
-    ctx.fillRect(0, HEADER_H / 2, 4, HEADER_H / 2);
+    ctx.fillStyle = col1hex; ctx.fillRect(0, 0, 4, HEADER_H / 2);
+    ctx.fillStyle = col2hex; ctx.fillRect(0, HEADER_H / 2, 4, HEADER_H / 2);
 
-    // Dots
-    ctx.beginPath(); ctx.arc(28, 38, 11, 0, Math.PI * 2);
-    ctx.fillStyle = COLORS[c1].hex; ctx.fill();
-    ctx.beginPath(); ctx.arc(50, 38, 11, 0, Math.PI * 2);
-    ctx.fillStyle = COLORS[c2].hex; ctx.fill();
+    if (hasColors) {
+      ctx.beginPath(); ctx.arc(28, 38, 11, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS[c1].hex; ctx.fill();
+      ctx.beginPath(); ctx.arc(50, 38, 11, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS[c2].hex; ctx.fill();
+    }
 
     // Title
+    var titleStr = hasColors ? (COLORS[c1].name + ' / ' + COLORS[c2].name) : (deckLabel || 'Deck');
     ctx.fillStyle = '#e6edf3';
     ctx.font = 'bold 24px system-ui, sans-serif';
-    ctx.fillText(COLORS[c1].name + ' / ' + COLORS[c2].name, 72, 46);
+    ctx.fillText(titleStr, hasColors ? 72 : 16, 46);
     ctx.fillStyle = '#8b949e';
     ctx.font = '12px system-ui, sans-serif';
-    ctx.fillText('Lorcana Stats  -  duels.ink', 72, 64);
+    ctx.fillText('Lorcana Stats  -  duels.ink', hasColors ? 72 : 16, 64);
 
     // Stat pills
     var wr = Math.round(wins / games * 100);
@@ -341,7 +365,8 @@
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = 'lorcana-' + c1 + '-' + c2 + '.png';
+      var fname = (c1 && c2) ? ('lorcana-' + c1 + '-' + c2) : 'lorcana-deck';
+      a.download = fname + '.png';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -356,7 +381,7 @@
 
   var hdr = document.createElement('div');
   hdr.style.cssText = 'padding:14px 16px;border-bottom:1px solid #30363d;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
-  hdr.innerHTML = '<span style="font-weight:600;font-size:15px">📊 Lorcana Stats</span><button id="lrc-close" style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;line-height:1;padding:2px 4px">x</button>';
+  hdr.innerHTML = '<span style="font-weight:600;font-size:15px">&#x1F4CA; Lorcana Stats</span><button id="lrc-close" style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;line-height:1;padding:2px 4px">x</button>';
 
   var body = document.createElement('div');
   body.id = 'lrc-body-inner';
@@ -387,16 +412,21 @@
       + '</div>';
   }
 
-  function showResults(rows, games, wins, c1, c2, filterTurns) {
+  function showResults(rows, games, wins, c1, c2, filterTurns, deckLabel) {
+    var hasColors = c1 && c2 && COLORS[c1] && COLORS[c2];
     var wr = Math.round(wins / games * 100);
     var totalInk  = rows.reduce(function(s, r){ return s + r.inked; }, 0);
     var totalPlay = rows.reduce(function(s, r){ return s + r.played; }, 0);
-    var maxI = Math.max.apply(null, rows.map(function(r){ return r.inked; }));
-    var maxP = Math.max.apply(null, rows.map(function(r){ return r.played; }));
+    var maxI = rows.length > 0 ? Math.max.apply(null, rows.map(function(r){ return r.inked; })) : 0;
+    var maxP = rows.length > 0 ? Math.max.apply(null, rows.map(function(r){ return r.played; })) : 0;
+
+    var titleHtml = hasColors
+      ? (dot(c1) + COLORS[c1].name + ' / ' + dot(c2) + COLORS[c2].name)
+      : (deckLabel || 'Deck');
 
     var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
       + '<button id="lrc-back" style="background:none;border:1px solid #30363d;border-radius:6px;color:#8b949e;padding:4px 10px;cursor:pointer;font-size:12px">&larr; Retour</button>'
-      + '<span style="font-weight:500;font-size:14px;flex:1">' + dot(c1) + COLORS[c1].name + ' / ' + dot(c2) + COLORS[c2].name + '</span>'
+      + '<span style="font-weight:500;font-size:14px;flex:1">' + titleHtml + '</span>'
       + '<button id="lrc-export" style="background:#238636;border:none;border-radius:6px;color:#fff;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:600">&#x2B07; Export PNG</button>'
       + (filterTurns > 0 ? '<span style="background:#1f3a4a;color:#58a6ff;border-radius:5px;padding:3px 8px;font-size:11px;margin-left:4px">-' + filterTurns + ' dernier' + (filterTurns > 1 ? 's' : '') + ' tour' + (filterTurns > 1 ? 's' : '') + '</span>' : '')
       + '</div>';
@@ -440,48 +470,75 @@
     });
 
     html += '</tbody></table>';
-    html += '<div style="margin-top:20px;text-align:center;padding-top:14px;border-top:1px solid #30363d">' + '<a href="https://ko-fi.com/flaxeau" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#FF5E5B;color:#fff;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">&#x2615; Soutenir le projet</a>' + '<div style="font-size:10px;color:#8b949e;margin-top:6px">Outil gratuit et open source</div>' + '</div>';
+    html += kofiBtn();
     body.innerHTML = html;
-    document.getElementById('lrc-back').onclick = showPairSelector;
+    document.getElementById('lrc-back').onclick = showDeckSelector;
     document.getElementById('lrc-export').onclick = function() {
-      exportImage(rows, games, wins, c1, c2);
+      exportImage(rows, games, wins, c1, c2, deckLabel);
     };
   }
 
-  function showPairSelector() {
-    var filterHtml = '<div style="margin-bottom:14px">'
-      + '<div style="font-size:11px;color:#8b949e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Filtre tours finaux</div>'
-      + '<div style="display:flex;gap:6px">';
-    [['Tous les tours', 0], ['-1 dernier tour', 1], ['-2 derniers tours', 2]].forEach(function(opt) {
-      var active = excludeLastTurns === opt[1];
-      filterHtml += '<button class="lrc-filter-btn" data-val="' + opt[1] + '" style="flex:1;padding:5px 4px;font-size:11px;border-radius:6px;cursor:pointer;border:1px solid ' + (active ? '#58a6ff' : '#30363d') + ';background:' + (active ? '#1f3a4a' : '#0d1117') + ';color:' + (active ? '#58a6ff' : '#8b949e') + '">' + opt[0] + '</button>';
-    });
-    filterHtml += '</div></div>';
-    var html = filterHtml
-      + '<p style="color:#8b949e;margin:0 0 14px;line-height:1.6;font-size:13px">Choisis une bicolorite pour voir les stats de tes cartes encrees et jouees.</p>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-    PAIRS.forEach(function(p) {
-      var c1 = p[0], c2 = p[1];
-      html += '<button class="lrc-pair-btn" data-c1="' + c1 + '" data-c2="' + c2 + '" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;cursor:pointer;text-align:left;font-size:12px;display:flex;align-items:center;gap:8px">'
-        + dot(c1) + dot(c2)
-        + '<span>' + COLORS[c1].name + ' / ' + COLORS[c2].name + '</span>'
+  async function showDeckSelector() {
+    if (!cachedAllGames) setStatus('Chargement de l\'historique...');
+    var allGames = await fetchAllMatchHistory();
+    var decks = groupGamesByDeck(allGames);
+
+    if (decks.length === 0) {
+      setStatus('Aucune partie trouvee dans l\'historique.');
+      return;
+    }
+
+    var html = filterHtmlFn();
+    html += '<p style="color:#8b949e;margin:0 0 14px;line-height:1.6;font-size:13px">Choisis un deck pour voir les stats de tes cartes encrees et jouees.</p>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px">';
+
+    decks.forEach(function(deck) {
+      var wr = Math.round(deck.wins / deck.gameList.length * 100);
+      var parts = deck.colors.split('/');
+      var colorDots = parts.map(function(c) { return dot(API_TO_KEY[c.trim()]); }).join('');
+      var colorLabel = parts.map(function(c) {
+        var k = API_TO_KEY[c.trim()];
+        return k ? COLORS[k].name : c;
+      }).join(' / ');
+      var displayName = deck.name ? (deck.name + ' (' + colorLabel + ')') : colorLabel;
+      html += '<button class="lrc-deck-btn" data-key="' + deck.key + '"'
+        + ' style="background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:10px 12px;cursor:pointer;text-align:left;font-size:12px;display:flex;align-items:center;gap:8px;width:100%">'
+        + colorDots
+        + '<span style="flex:1;font-weight:500">' + displayName + '</span>'
+        + '<span style="color:#8b949e;font-size:11px">' + deck.gameList.length + ' parties</span>'
+        + '<span style="color:' + (wr >= 50 ? '#3fb950' : '#f85149') + ';font-size:11px;font-weight:600;margin-left:6px">WR ' + wr + '%</span>'
         + '</button>';
     });
+
     html += '</div>';
-    html += '<div style="margin-top:20px;text-align:center;padding-top:14px;border-top:1px solid #30363d">' + '<a href="https://ko-fi.com/flaxeau" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#FF5E5B;color:#fff;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">&#x2615; Soutenir le projet</a>' + '<div style="font-size:10px;color:#8b949e;margin-top:6px">Outil gratuit et open source</div>' + '</div>';
+    html += kofiBtn();
     body.innerHTML = html;
+
+    var deckMap = {};
+    decks.forEach(function(d) { deckMap[d.key] = d; });
+
     body.querySelectorAll('.lrc-filter-btn').forEach(function(btn) {
       btn.onclick = function() {
         excludeLastTurns = parseInt(this.getAttribute('data-val'));
-        showPairSelector();
+        showDeckSelector();
       };
     });
-    body.querySelectorAll('.lrc-pair-btn').forEach(function(btn) {
+
+    body.querySelectorAll('.lrc-deck-btn').forEach(function(btn) {
       btn.onmouseenter = function(){ this.style.borderColor = '#3498DB'; };
       btn.onmouseleave = function(){ this.style.borderColor = '#30363d'; };
-      btn.onclick = function() { analyse(this.getAttribute('data-c1'), this.getAttribute('data-c2')); };
+      btn.onclick = function() {
+        var key = this.getAttribute('data-key');
+        var deck = deckMap[key];
+        if (!deck) return;
+        var parts = deck.colors.split('/');
+        var c1 = API_TO_KEY[parts[0] ? parts[0].trim() : ''] || null;
+        var c2 = API_TO_KEY[parts[1] ? parts[1].trim() : ''] || null;
+        var deckLabel = deck.name || deck.colors;
+        analyse(deck.gameList, c1, c2, deckLabel);
+      };
     });
   }
 
-  showPairSelector();
+  showDeckSelector();
 })();
