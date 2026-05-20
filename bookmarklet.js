@@ -90,8 +90,34 @@
       if (!data.next_cursor || games.length === 0) break;
       cursor = data.next_cursor;
     }
+    if (allGames.length > 0) {
+      console.log('[LorcanaStats] Champs du game object:', Object.keys(allGames[0]));
+      console.log('[LorcanaStats] Premier game:', JSON.stringify(allGames[0]));
+    }
     cachedAllGames = allGames;
     return allGames;
+  }
+
+  async function fetchDeckNamesMap() {
+    var map = {};
+    var endpoints = ['/api/me/decks', '/api/me/deck-list', '/api/v1/me/decks'];
+    for (var i = 0; i < endpoints.length; i++) {
+      try {
+        var resp = await fetch(endpoints[i] + '?format=json&limit=200');
+        if (!resp.ok) continue;
+        var data = await resp.json();
+        console.log('[LorcanaStats] Decks endpoint ' + endpoints[i] + ':', JSON.stringify(data).substring(0, 300));
+        var arr = data.decks || data.results || data.items || (Array.isArray(data) ? data : []);
+        arr.forEach(function(d) {
+          var id = d.id || d.deck_id || d.deckId;
+          var name = d.name || d.deck_name || d.title || d.label;
+          if (id && name) map[String(id)] = name;
+        });
+        if (Object.keys(map).length > 0) break;
+      } catch(e) { console.log('[LorcanaStats] Erreur ' + endpoints[i] + ':', e.message); }
+    }
+    console.log('[LorcanaStats] Deck names map:', map);
+    return map;
   }
 
   function groupGamesByDeck(allGames) {
@@ -99,7 +125,7 @@
     allGames.forEach(function(g) {
       var colors = g.your_deck_colors || '?';
       var deckId = g.your_deck_id || g.deck_id || null;
-      var deckName = g.your_deck_name || g.deck_name || null;
+      var deckName = g._resolvedDeckName || g.your_deck_name || g.deck_name || null;
       var key = deckId ? (colors + '|' + deckId) : colors;
       if (!decks[key]) {
         decks[key] = { key: key, colors: colors, deckId: deckId, name: deckName, gameList: [], wins: 0 };
@@ -481,6 +507,12 @@
   async function showDeckSelector() {
     if (!cachedAllGames) setStatus('Chargement de l\'historique...');
     var allGames = await fetchAllMatchHistory();
+    var deckNamesMap = await fetchDeckNamesMap();
+    // Inject names into game objects if we have a deck_id
+    allGames.forEach(function(g) {
+      var did = String(g.your_deck_id || g.deck_id || '');
+      if (did && deckNamesMap[did]) g._resolvedDeckName = deckNamesMap[did];
+    });
     var decks = groupGamesByDeck(allGames);
 
     if (decks.length === 0) {
