@@ -23,6 +23,8 @@
   var excludeLastTurns = 0;
   var cachedAllGames = null;
   var STORAGE_KEY = 'lrc_deck_names';
+  var sortCol = 'total';
+  var sortDir = -1;
 
   function getDeckNames() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; }
