@@ -428,6 +428,7 @@
     });
 
     html += '</tbody></table>';
+    html += '<div style="margin-top:20px;text-align:center;padding-top:14px;border-top:1px solid #30363d">' + '<a href="https://ko-fi.com/flaxeau" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#FF5E5B;color:#fff;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">&#x2615; Soutenir le projet</a>' + '<div style="font-size:10px;color:#8b949e;margin-top:6px">Outil gratuit et open source</div>' + '</div>';
     body.innerHTML = html;
     document.getElementById('lrc-back').onclick = showPairSelector;
     document.getElementById('lrc-export').onclick = function() {
@@ -446,6 +447,7 @@
         + '</button>';
     });
     html += '</div>';
+    html += '<div style="margin-top:20px;text-align:center;padding-top:14px;border-top:1px solid #30363d">' + '<a href="https://ko-fi.com/flaxeau" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#FF5E5B;color:#fff;text-decoration:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600">&#x2615; Soutenir le projet</a>' + '<div style="font-size:10px;color:#8b949e;margin-top:6px">Outil gratuit et open source</div>' + '</div>';
     body.innerHTML = html;
     body.querySelectorAll('.lrc-pair-btn').forEach(function(btn) {
       btn.onmouseenter = function(){ this.style.borderColor = '#3498DB'; };
