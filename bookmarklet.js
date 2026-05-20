@@ -118,12 +118,17 @@
         var won = game.result === 'win';
         processed++;
         if (won) wins++;
-        var maxTurn = 0;
-        Object.values(data).forEach(function(e) { if ((e.turnNumber || 0) > maxTurn) maxTurn = e.turnNumber || 0; });
-        var turnCutoff = maxTurn - excludeLastTurns;
+        var myCardTurns = [];
+        Object.values(data).forEach(function(e) {
+          if (e.player === myPlayer && (e.type === 'CARD_INKED' || e.type === 'CARD_PLAYED') && e.turnNumber) {
+            if (myCardTurns.indexOf(e.turnNumber) === -1) myCardTurns.push(e.turnNumber);
+          }
+        });
+        myCardTurns.sort(function(a,b){ return b - a; });
+        var excludedTurns = excludeLastTurns > 0 ? myCardTurns.slice(0, excludeLastTurns) : [];
         Object.values(data).forEach(function(entry) {
           if (entry.player !== myPlayer) return;
-          if (excludeLastTurns > 0 && (entry.turnNumber || 0) > turnCutoff) return;
+          if (excludedTurns.length > 0 && excludedTurns.indexOf(entry.turnNumber) !== -1) return;
           var name = entry.data && entry.data.cardName;
           if (!name) return;
           if (!cardWS[name]) cardWS[name] = { iW:0, iG:0, pW:0, pG:0 };
