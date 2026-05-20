@@ -472,28 +472,69 @@
       + '<span><span style="font-weight:600;color:#e6edf3">WR joue</span> = winrate quand jouee</span>'
       + '</div>';
 
+    function thSort(col, label, color, align) {
+      var active = sortCol === col;
+      var arrow = active ? (sortDir === -1 ? ' &#x25BC;' : ' &#x25B2;') : ' &#x25B8;';
+      return '<th class="lrc-sort-th" data-col="' + col + '"'
+        + ' style="padding:6px 4px;color:' + color + ';font-weight:500;text-align:' + (align || 'center') + ';cursor:pointer;user-select:none;white-space:nowrap">'
+        + label + '<span style="font-size:9px;opacity:' + (active ? '1' : '0.35') + '">' + arrow + '</span></th>';
+    }
+
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px">'
       + '<thead><tr style="border-bottom:1px solid #30363d">'
-      + '<th style="text-align:left;padding:6px 4px;color:#8b949e;font-weight:500">Carte</th>'
-      + '<th style="padding:6px 4px;color:#E74C3C;font-weight:500;min-width:80px">Encree</th>'
-      + '<th style="padding:6px 4px;color:#3498DB;font-weight:500;min-width:80px">Jouee</th>'
-      + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center" title="Taux d\'encrage">% enc.</th>'
-      + '<th style="padding:6px 4px;color:#8b949e;font-weight:500;text-align:center" title="Winrate quand jouee">WR joue</th>'
-      + '</tr></thead><tbody>';
+      + thSort('card',    'Carte',   '#8b949e', 'left')
+      + thSort('inked',   'Encree',  '#E74C3C')
+      + thSort('played',  'Jouee',   '#3498DB')
+      + thSort('inkRate', '% enc.',  '#8b949e')
+      + thSort('pWR',     'WR joue', '#8b949e')
+      + '</tr></thead><tbody id="lrc-tbody"></tbody></table>';
 
-    rows.forEach(function(r, idx) {
-      html += '<tr style="border-bottom:1px solid #21262d' + (idx % 2 ? ';background:#0d1117' : '') + '">'
-        + '<td style="padding:6px 4px;font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.card + '">' + r.card + '</td>'
-        + '<td style="padding:6px 4px">' + bar(r.inked, maxI, '#E74C3C') + '</td>'
-        + '<td style="padding:6px 4px">' + bar(r.played, maxP, '#3498DB') + '</td>'
-        + '<td style="padding:6px 4px;text-align:center">' + badge(r.inkRate) + '</td>'
-        + '<td style="padding:6px 4px;text-align:center">' + badge(r.pWR) + '</td>'
-        + '</tr>';
-    });
-
-    html += '</tbody></table>';
     html += kofiBtn();
     body.innerHTML = html;
+
+    function renderRows() {
+      var sorted = rows.slice().sort(function(a, b) {
+        var av = a[sortCol];
+        var bv = b[sortCol];
+        if (av === null || av === undefined) av = sortDir === 1 ? Infinity : -Infinity;
+        if (bv === null || bv === undefined) bv = sortDir === 1 ? Infinity : -Infinity;
+        if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+        return sortDir * (av - bv);
+      });
+      var tbody = body.querySelector('#lrc-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = sorted.map(function(r, idx) {
+        return '<tr style="border-bottom:1px solid #21262d' + (idx % 2 ? ';background:#0d1117' : '') + '">'
+          + '<td style="padding:6px 4px;font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + r.card + '">' + r.card + '</td>'
+          + '<td style="padding:6px 4px">' + bar(r.inked, maxI, '#E74C3C') + '</td>'
+          + '<td style="padding:6px 4px">' + bar(r.played, maxP, '#3498DB') + '</td>'
+          + '<td style="padding:6px 4px;text-align:center">' + badge(r.inkRate) + '</td>'
+          + '<td style="padding:6px 4px;text-align:center">' + badge(r.pWR) + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+    renderRows();
+
+    body.querySelectorAll('.lrc-sort-th').forEach(function(th) {
+      th.onclick = function() {
+        var col = this.getAttribute('data-col');
+        if (sortCol === col) {
+          sortDir = -sortDir;
+        } else {
+          sortCol = col;
+          sortDir = col === 'card' ? 1 : -1;
+        }
+        body.querySelectorAll('.lrc-sort-th').forEach(function(h) {
+          var hcol = h.getAttribute('data-col');
+          var active = hcol === sortCol;
+          var arrow = active ? (sortDir === -1 ? ' &#x25BC;' : ' &#x25B2;') : ' &#x25B8;';
+          var span = h.querySelector('span');
+          if (span) { span.innerHTML = arrow; span.style.opacity = active ? '1' : '0.35'; }
+        });
+        renderRows();
+      };
+    });
+
     document.getElementById('lrc-back').onclick = showDeckSelector;
     document.getElementById('lrc-export').onclick = function() {
       exportImage(rows, games, wins, c1, c2, deckLabel);
