@@ -456,7 +456,7 @@
 
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
     [['Parties', games, ''], ['Winrate', wr + '%', wins + 'V - ' + (games - wins) + 'D'],
-     ['Encrages', totalInk, ''], ['Jeux de cartes', totalPlay, '']].forEach(function(m) {
+     ['Encrages', totalInk, ''], ['Cartes jouées', totalPlay, '']].forEach(function(m) {
       html += '<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px">'
         + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#8b949e;margin-bottom:3px">' + m[0] + '</div>'
         + '<div style="font-size:20px;font-weight:600">' + m[1] + '</div>'
