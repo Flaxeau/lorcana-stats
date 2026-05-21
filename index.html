@@ -321,4 +321,140 @@
       <span style="font-size:12px;color:var(--muted)" data-i18n="tip1-desc">Clique sur l'icône crayon dans la liste pour donner un nom lisible à chaque deck (ex. "Ruby/Acier Aggro"). Le nom est sauvegardé dans ton navigateur.</span>
     </div>
     <div class="color-pill" style="border-radius:10px;padding:10px 14px;flex-direction:column;align-items:flex-start;gap:4px;width:100%">
-      <span style="font-weight:600;font-size:13px" data-
+      <span style="font-weight:600;font-size:13px" data--i18n="tip2-title">⏱️ Filtre les derniers tours</span>
+      <span style="font-size:12px;color:var(--muted)" data-i18n="tip2-desc">Les boutons "-1" et "-2" dans les résultats excluent le dernier (ou les 2 derniers) tours de chaque partie — utile pour enlever les cartes jamais jouées en fin de game.</span>
+    </div>
+    <div class="color-pill" style="border-radius:10px;padding:10px 14px;flex-direction:column;align-items:flex-start;gap:4px;width:100%">
+      <span style="font-weight:600;font-size:13px" data-i18n="tip3-title">🔀 Trie les colonnes</span>
+      <span style="font-size:12px;color:var(--muted)" data-i18n="tip3-desc">Clique sur l'en-tête de n'importe quelle colonne (Carte, Encrée, Jouée, WR%) pour trier du plus grand au plus petit ou inversement.</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span data-i18n="footer-text">Outil non-officiel, non affilié à Ravensburger ou Disney · Données issues de <a href="https://duels.ink" target="_blank" rel="noopener">duels.ink</a> · Code source : <a href="https://github.com/Flaxeau/lorcana-stats" target="_blank" rel="noopener">GitHub</a> · <a href="https://discord.gg/3UArU9vq" target="_blank" rel="noopener">Discord</a></span>
+</footer>
+
+<script>
+  // Bookmarklet href
+  var SCRIPT_URL = 'https://flaxeau.github.io/lorcana-stats/bookmarklet.js';
+  var bm = 'javascript:(function(){var s=document.createElement("script");s.src="' + SCRIPT_URL + '?v="+Date.now();document.head.appendChild(s);})();';
+  document.getElementById('bm-link').href = bm;
+
+  // i18n translations
+  var T = {
+    fr: {
+      'nav-badge':    'Outil non-officiel · Duels.ink',
+      'hero-h1':      'Tes stats Lorcana,<br><span>deck par deck</span>',
+      'hero-p':       'Analyse tes parties sur Duels.ink et découvre, pour chaque deck, quelles cartes tu encres, quelles cartes tu joues, et ton winrate carte par carte.',
+      'step-a-title': 'Affiche ta barre de favoris',
+      'step-a-desc':  'Si tu ne la vois pas en haut de ton navigateur, utilise le raccourci :',
+      'kbd-win':      'Windows / Linux',
+      'step-b-title': 'Glisse le bouton dans la barre',
+      'step-b-desc':  'Maintiens le clic sur le bouton rouge et dépose-le dans ta barre de favoris.',
+      'bar-label':    'Favoris',
+      'bar-target':   '+ ici',
+      'discord-cta':  'Des questions ? Rejoins la communauté :',
+      'discord-join': 'Rejoindre le Discord',
+      'steps-title':  'Comment ça marche',
+      'step1-title':  'Installe le bookmarklet (une seule fois)',
+      'step1-desc':   'Affiche ta barre de favoris (<kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:13px">Ctrl+Shift+B</kbd>), puis glisse le bouton rouge dans ta barre de favoris. Rien à installer.',
+      'step2-title':  'Va sur Duels.ink et connecte-toi',
+      'step2-desc':   'Ouvre <a href="https://duels.ink" target="_blank" rel="noopener" style="color:var(--sapphire)">duels.ink</a> dans ton navigateur et connecte-toi à ton compte.',
+      'step3-title':  'Clique sur le favori',
+      'step3-desc':   'Un panneau s’ouvre à droite de la page. Sélectionne un deck et l’outil analyse toutes tes parties avec ce deck.',
+      'feat-title':   'Ce que tu vois',
+      'feat1-title':  'Tous tes decks',
+      'feat1-desc':   'Chaque deck joué est listé séparément, même si tu as plusieurs listes de la même couleur.',
+      'feat2-title':  "Stats d'encrage",
+      'feat2-desc':   'Quelles cartes tu encres le plus souvent, et ton taux d’encrage par carte.',
+      'feat3-title':  'Cartes jouées',
+      'feat3-desc':   'Dans combien de parties tu as posé chaque carte sur le terrain avec ce deck.',
+      'feat4-title':  'Winrate par carte',
+      'feat4-desc':   'Ton taux de victoire dans les parties où tu as joué ou encré chaque carte.',
+      'feat5-title':  '100% privé',
+      'feat5-desc':   'Aucune donnée ne quitte ton navigateur. Tout est calculé localement.',
+      'feat6-title':  'Filtre par tours',
+      'feat6-desc':   'Exclue le dernier ou les 2 derniers tours pour éliminer les cartes non jouées en fin de partie.',
+      'tips-title':   "Conseils d'utilisation",
+      'tip1-title':   '✏️ Renomme tes decks',
+      'tip1-desc':    "Clique sur l'icône crayon pour donner un nom lisible à chaque deck. Le nom est sauvegardé dans ton navigateur.",
+      'tip2-title':   '⏱️ Filtre les derniers tours',
+      'tip2-desc':    'Les boutons "-1" et "-2" excluent le dernier (ou les 2 derniers) tours de chaque partie.',
+      'tip3-title':   '🔀 Trie les colonnes',
+      'tip3-desc':    "Clique sur l'en-tête de n'importe quelle colonne pour trier du plus grand au plus petit.",
+      'footer-text':  'Outil non-officiel, non affilié à Ravensburger ou Disney · Données issues de <a href="https://duels.ink" target="_blank" rel="noopener">duels.ink</a> · Code source : <a href="https://github.com/Flaxeau/lorcana-stats" target="_blank" rel="noopener">GitHub</a> · <a href="https://discord.gg/3UArU9vq" target="_blank" rel="noopener">Discord</a>'
+    },
+    en: {
+      'nav-badge':    'Unofficial tool · Duels.ink',
+      'hero-h1':      'Your Lorcana stats,<br><span>deck by deck</span>',
+      'hero-p':       'Analyze your games on Duels.ink and discover, for each deck, which cards you ink, which cards you play, and your winrate card by card.',
+      'step-a-title': 'Show your bookmarks bar',
+      'step-a-desc':  "If you don't see it at the top of your browser, use the shortcut:",
+      'kbd-win':      'Windows / Linux',
+      'step-b-title': 'Drag the button into the bar',
+      'step-b-desc':  'Hold click on the red button and drop it into your bookmarks bar.',
+      'bar-label':    'Bookmarks',
+      'bar-target':   '+ here',
+      'discord-cta':  'Questions? Join the community:',
+      'discord-join': 'Join Discord',
+      'steps-title':  'How it works',
+      'step1-title':  'Install the bookmarklet (once)',
+      'step1-desc':   'Show your bookmarks bar (<kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:13px">Ctrl+Shift+B</kbd>), then drag the red button into it. Nothing to install.',
+      'step2-title':  'Go to Duels.ink and sign in',
+      'step2-desc':   'Open <a href="https://duels.ink" target="_blank" rel="noopener" style="color:var(--sapphire)">duels.ink</a> in your browser and sign in to your account.',
+      'step3-title':  'Click the bookmark',
+      'step3-desc':   'A panel opens on the right side of the page. Select a deck and the tool automatically analyzes all your games with that deck.',
+      'feat-title':   'What you see',
+      'feat1-title':  'All your decks',
+      'feat1-desc':   'Each played deck is listed separately, even if you have multiple lists of the same color.',
+      'feat2-title':  'Ink stats',
+      'feat2-desc':   'Which cards you ink most often, and your ink rate per card.',
+      'feat3-title':  'Cards played',
+      'feat3-desc':   'In how many games you played each card on the table with that deck.',
+      'feat4-title':  'Winrate per card',
+      'feat4-desc':   'Your win rate in games where you played or inked each card.',
+      'feat5-title':  '100% private',
+      'feat5-desc':   'No data leaves your browser. Everything is calculated locally.',
+      'feat6-title':  'Turn filter',
+      'feat6-desc':   'Exclude the last 1 or 2 turns to remove unplayed cards at the end of a game.',
+      'tips-title':   'Usage tips',
+      'tip1-title':   '✏️ Rename your decks',
+      'tip1-desc':    'Click the pencil icon to give a readable name to each deck (e.g. "Ruby/Steel Aggro"). Saved in your browser.',
+      'tip2-title':   '⏱️ Filter last turns',
+      'tip2-desc':    'The "-1" and "-2" buttons exclude the last (or last 2) turns of each game.',
+      'tip3-title':   '🔀 Sort columns',
+      'tip3-desc':    'Click any column header (Card, Inked, Played, WR%) to sort largest to smallest or reverse.',
+      'footer-text':  'Unofficial tool, not affiliated with Ravensburger or Disney · Data from <a href="https://duels.ink" target="_blank" rel="noopener">duels.ink</a> · Source code: <a href="https://github.com/Flaxeau/lorcana-stats" target="_blank" rel="noopener">GitHub</a> · <a href="https://discord.gg/3UArU9vq" target="_blank" rel="noopener">Discord</a>'
+    }
+  };
+
+  var currentLang = 'fr';
+
+  function applyLang(lang) {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      if (T[lang] && T[lang][key] !== undefined) {
+        el.innerHTML = T[lang][key];
+      }
+    });
+    document.getElementById('lang-btn').innerHTML = lang === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR';
+    currentLang = lang;
+    try { localStorage.setItem('lorcana-lang', lang); } catch(e) {}
+  }
+
+  function toggleLang() {
+    applyLang(currentLang === 'fr' ? 'en' : 'fr');
+  }
+
+  // Restore saved preference
+  (function() {
+    try {
+      var saved = localStorage.getItem('lorcana-lang');
+      if (saved && saved !== 'fr') applyLang(saved);
+    } catch(e) {}
+  })();
+</script>
+</body>
+</html>
