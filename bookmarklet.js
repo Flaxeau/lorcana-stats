@@ -400,7 +400,7 @@
 
   var hdr = document.createElement('div');
   hdr.style.cssText = 'padding:14px 16px;border-bottom:1px solid #30363d;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
-  hdr.innerHTML = '<span style="font-weight:600;font-size:15px">&#x1F4CA; Lorcana Stats</span><button id="lrc-close" style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;line-height:1;padding:2px 4px">x</button>';
+  hdr.innerHTML = '<span style="font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='22' height='22' style='flex-shrink:0;vertical-align:middle'><defs><clipPath id='lrcIco'><path d='M32 62 Q4 38 32 4 Q60 38 32 62Z'/></clipPath></defs><path d='M32 62 Q4 38 32 4 Q60 38 32 62Z' fill='#534AB7'/><path d='M32 58 Q8 38 32 8 Q36 38 32 58Z' fill='#3C3489' opacity='.4'/><polyline points='10,42 16,30 22,36 28,22 32,28 38,16 44,22 54,13' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' opacity='.95' clip-path='url(#lrcIco)'/><circle cx='54' cy='13' r='2.8' fill='white' opacity='.95' clip-path='url(#lrcIco)'/><path d='M32 62 Q27 55 32 50 Q37 55 32 62Z' fill='#26215C'/></svg>ink-stats</span><button id="lrc-close" style="background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer;line-height:1;padding:2px 4px">&#x2715;</button>';
 
   var body = document.createElement('div');
   body.id = 'lrc-body-inner';
