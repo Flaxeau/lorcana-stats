@@ -23,12 +23,24 @@
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
   /* NAV */
-  nav { border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; gap: 10px; }
+  nav { border-bottom: 1px solid var(--border); padding: 14px 32px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .nav-logo { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; }
   .gem { display: inline-block; width: 11px; height: 11px; border-radius: 2px; transform: rotate(45deg); }
   .gem-r { background: var(--ruby); }
   .gem-s { background: var(--sapphire); }
   .nav-badge { font-size: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; color: var(--muted); }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+  /* Lang switcher */
+  .lang-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 11px;
+    font-size: 12px; font-weight: 600; color: var(--text);
+    cursor: pointer; transition: border-color .15s, background .15s;
+    white-space: nowrap;
+  }
+  .lang-btn:hover { border-color: var(--muted); background: var(--surface); }
 
   /* HERO */
   .hero { text-align: center; padding: 72px 24px 56px; max-width: 680px; margin: 0 auto; }
@@ -159,17 +171,20 @@
     <span class="gem gem-s"></span>
     Lorcana Stats
   </div>
-  <span class="nav-badge">Outil non-officiel · Duels.ink</span>
-  <a href="https://discord.gg/3UArU9vq" target="_blank" rel="noopener" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#5865F2;color:#fff;text-decoration:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.004.062.028.12.061.166a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-    Discord
-  </a>
+  <span class="nav-badge" data-i18n="nav-badge">Outil non-officiel · Duels.ink</span>
+  <div class="nav-right">
+    <button class="lang-btn" id="lang-btn" onclick="toggleLang()" title="Switch language">🇬🇧 EN</button>
+    <a href="https://discord.gg/3UArU9vq" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:#5865F2;color:#fff;text-decoration:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.004.062.028.12.061.166a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+      Discord
+    </a>
+  </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <h1>Tes stats Lorcana,<br><span>deck par deck</span></h1>
-  <p>Analyse tes parties sur Duels.ink et découvre, pour chaque deck, quelles cartes tu encres, quelles cartes tu joues, et ton winrate carte par carte.</p>
+  <h1 data-i18n="hero-h1">Tes stats Lorcana,<br><span>deck par deck</span></h1>
+  <p data-i18n="hero-p">Analyse tes parties sur Duels.ink et découvre, pour chaque deck, quelles cartes tu encres, quelles cartes tu joues, et ton winrate carte par carte.</p>
 
   <div class="bm-area">
 
@@ -177,10 +192,10 @@
     <div class="bm-substep">
       <div class="bm-substep-num">A</div>
       <div class="bm-substep-body">
-        <div class="bm-substep-title">Affiche ta barre de favoris</div>
-        <div class="bm-substep-desc">Si tu ne la vois pas en haut de ton navigateur, utilise le raccourci :</div>
+        <div class="bm-substep-title" data-i18n="step-a-title">Affiche ta barre de favoris</div>
+        <div class="bm-substep-desc" data-i18n="step-a-desc">Si tu ne la vois pas en haut de ton navigateur, utilise le raccourci :</div>
         <div class="kbd-row">
-          <span class="kbd-label">Windows / Linux</span>
+          <span class="kbd-label" data-i18n="kbd-win">Windows / Linux</span>
           <kbd>Ctrl</kbd><span class="kbd-sep">+</span><kbd>Shift</kbd><span class="kbd-sep">+</span><kbd>B</kbd>
           <span class="kbd-sep" style="margin:0 6px">·</span>
           <span class="kbd-label">Mac</span>
@@ -193,8 +208,8 @@
     <div class="bm-substep" style="margin-bottom:16px">
       <div class="bm-substep-num">B</div>
       <div class="bm-substep-body">
-        <div class="bm-substep-title">Glisse le bouton dans la barre</div>
-        <div class="bm-substep-desc" style="margin-bottom:12px">Maintiens le clic sur le bouton rouge et dépose-le dans ta barre de favoris.</div>
+        <div class="bm-substep-title" data-i18n="step-b-title">Glisse le bouton dans la barre</div>
+        <div class="bm-substep-desc" style="margin-bottom:12px" data-i18n="step-b-desc">Maintiens le clic sur le bouton rouge et dépose-le dans ta barre de favoris.</div>
         <div class="bm-drag-zone">
           <a id="bm-link" class="bm-btn" href="#">
             📊 Lorcana Stats
@@ -206,10 +221,10 @@
           <div class="bm-bar-mock">
             <span class="bm-bar-mock-icon">🔖</span>
             <div class="bm-bar-mock-items">
-              <span>Favoris</span>
+              <span data-i18n="bar-label">Favoris</span>
               <span>…</span>
             </div>
-            <div class="bm-bar-target">+ ici</div>
+            <div class="bm-bar-target" data-i18n="bar-target">+ ici</div>
           </div>
         </div>
       </div>
@@ -220,10 +235,10 @@
       Compatible Chrome, Firefox, Edge, Safari
     </div>
     <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:13px;color:var(--muted)">Des questions ? Rejoins la communauté :</span>
+      <span style="font-size:13px;color:var(--muted)" data-i18n="discord-cta">Des questions ? Rejoins la communauté :</span>
       <a href="https://discord.gg/3UArU9vq" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:7px;background:#5865F2;color:#fff;text-decoration:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.004.062.028.12.061.166a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-        Rejoindre le Discord
+        <span data-i18n="discord-join">Rejoindre le Discord</span>
       </a>
     </div>
   </div>
@@ -231,29 +246,29 @@
 
 <!-- STEPS -->
 <section class="steps">
-  <h2>Comment ça marche</h2>
+  <h2 data-i18n="steps-title">Comment ça marche</h2>
 
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-content">
-      <h3>Installe le bookmarklet (une seule fois)</h3>
-      <p>Affiche ta barre de favoris (<kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:inherit;font-size:13px">Ctrl+Shift+B</kbd>), puis glisse le bouton rouge « 📊 Lorcana Stats » dedans. Rien à installer — c'est juste un raccourci dans ton navigateur.</p>
+      <h3 data-i18n="step1-title">Installe le bookmarklet (une seule fois)</h3>
+      <p data-i18n="step1-desc">Affiche ta barre de favoris (<kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:inherit;font-size:13px">Ctrl+Shift+B</kbd>), puis glisse le bouton rouge « 📊 Lorcana Stats » dedans. Rien à installer — c'est juste un raccourci dans ton navigateur.</p>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">2</div>
     <div class="step-content">
-      <h3>Va sur Duels.ink et connecte-toi</h3>
-      <p>Ouvre <a href="https://duels.ink" target="_blank" rel="noopener" style="color: var(--sapphire)">duels.ink</a> dans ton navigateur et connecte-toi à ton compte.</p>
+      <h3 data-i18n="step2-title">Va sur Duels.ink et connecte-toi</h3>
+      <p data-i18n="step2-desc">Ouvre <a href="https://duels.ink" target="_blank" rel="noopener" style="color: var(--sapphire)">duels.ink</a> dans ton navigateur et connecte-toi à ton compte.</p>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-content">
-      <h3>Clique sur le favori</h3>
-      <p>Un panneau s'ouvre à droite de la page. Sélectionne un deck dans ta liste et l'outil analyse automatiquement toutes tes parties avec ce deck — encrages, cartes jouées, winrate par carte.</p>
+      <h3 data-i18n="step3-title">Clique sur le favori</h3>
+      <p data-i18n="step3-desc">Un panneau s'ouvre à droite de la page. Sélectionne un deck dans ta liste et l'outil analyse automatiquement toutes tes parties avec ce deck — encrages, cartes jouées, winrate par carte.</p>
     </div>
   </div>
 </section>
@@ -261,37 +276,37 @@
 <!-- FEATURES -->
 <section class="features">
   <div class="features-inner">
-    <h2>Ce que tu vois</h2>
+    <h2 data-i18n="feat-title">Ce que tu vois</h2>
     <div class="features-grid">
       <div class="feat">
         <div class="feat-icon">🎨</div>
-        <h4>Tous tes decks</h4>
-        <p>Chaque deck joué est listé séparément, même si tu as plusieurs listes de la même couleur.</p>
+        <h4 data-i18n="feat1-title">Tous tes decks</h4>
+        <p data-i18n="feat1-desc">Chaque deck joué est listé séparément, même si tu as plusieurs listes de la même couleur.</p>
       </div>
       <div class="feat">
         <div class="feat-icon">💧</div>
-        <h4>Stats d'encrage</h4>
-        <p>Quelles cartes tu encres le plus souvent, et ton taux d'encrage par carte.</p>
+        <h4 data-i18n="feat2-title">Stats d'encrage</h4>
+        <p data-i18n="feat2-desc">Quelles cartes tu encres le plus souvent, et ton taux d'encrage par carte.</p>
       </div>
       <div class="feat">
         <div class="feat-icon">🃏</div>
-        <h4>Cartes jouées</h4>
-        <p>Dans combien de parties tu as posé chaque carte sur le terrain avec ce deck.</p>
+        <h4 data-i18n="feat3-title">Cartes jouées</h4>
+        <p data-i18n="feat3-desc">Dans combien de parties tu as posé chaque carte sur le terrain avec ce deck.</p>
       </div>
       <div class="feat">
         <div class="feat-icon">🏆</div>
-        <h4>Winrate par carte</h4>
-        <p>Ton taux de victoire dans les parties où tu as joué ou encré chaque carte.</p>
+        <h4 data-i18n="feat4-title">Winrate par carte</h4>
+        <p data-i18n="feat4-desc">Ton taux de victoire dans les parties où tu as joué ou encré chaque carte.</p>
       </div>
       <div class="feat">
         <div class="feat-icon">🔒</div>
-        <h4>100% privé</h4>
-        <p>Aucune donnée ne quitte ton navigateur. Tout est calculé localement.</p>
+        <h4 data-i18n="feat5-title">100% privé</h4>
+        <p data-i18n="feat5-desc">Aucune donnée ne quitte ton navigateur. Tout est calculé localement.</p>
       </div>
       <div class="feat">
         <div class="feat-icon">⚡</div>
-        <h4>Filtre par tours</h4>
-        <p>Exclue le dernier ou les 2 derniers tours pour éliminer les cartes non jouées en fin de partie.</p>
+        <h4 data-i18n="feat6-title">Filtre par tours</h4>
+        <p data-i18n="feat6-desc">Exclue le dernier ou les 2 derniers tours pour éliminer les cartes non jouées en fin de partie.</p>
       </div>
     </div>
   </div>
@@ -299,35 +314,11 @@
 
 <!-- TIPS -->
 <section class="colors-section">
-  <h2>Conseils d'utilisation</h2>
+  <h2 data-i18n="tips-title">Conseils d'utilisation</h2>
   <div class="colors-grid">
     <div class="color-pill" style="border-radius:10px;padding:10px 14px;flex-direction:column;align-items:flex-start;gap:4px;width:100%">
-      <span style="font-weight:600;font-size:13px">✏️ Renomme tes decks</span>
-      <span style="font-size:12px;color:var(--muted)">Clique sur l'icône crayon dans la liste pour donner un nom lisible à chaque deck (ex. "Ruby/Acier Aggro"). Le nom est sauvegardé dans ton navigateur.</span>
+      <span style="font-weight:600;font-size:13px" data-i18n="tip1-title">✏️ Renomme tes decks</span>
+      <span style="font-size:12px;color:var(--muted)" data-i18n="tip1-desc">Clique sur l'icône crayon dans la liste pour donner un nom lisible à chaque deck (ex. "Ruby/Acier Aggro"). Le nom est sauvegardé dans ton navigateur.</span>
     </div>
     <div class="color-pill" style="border-radius:10px;padding:10px 14px;flex-direction:column;align-items:flex-start;gap:4px;width:100%">
-      <span style="font-weight:600;font-size:13px">⏱️ Filtre les derniers tours</span>
-      <span style="font-size:12px;color:var(--muted)">Les boutons "-1" et "-2" dans les résultats excluent le dernier (ou les 2 derniers) tours de chaque partie — utile pour enlever les cartes jamais jouées en fin de game.</span>
-    </div>
-    <div class="color-pill" style="border-radius:10px;padding:10px 14px;flex-direction:column;align-items:flex-start;gap:4px;width:100%">
-      <span style="font-weight:600;font-size:13px">🔀 Trie les colonnes</span>
-      <span style="font-size:12px;color:var(--muted)">Clique sur l'en-tête de n'importe quelle colonne (Carte, Encrée, Jouée, WR%) pour trier du plus grand au plus petit ou inversement.</span>
-    </div>
-  </div>
-</section>
-
-<footer>
-  Outil non-officiel, non affilié à Ravensburger ou Disney ·
-  Données issues de <a href="https://duels.ink" target="_blank" rel="noopener">duels.ink</a> ·
-  Code source : <a href="https://github.com/Flaxeau/lorcana-stats" target="_blank" rel="noopener">GitHub</a> ·
-  <a href="https://discord.gg/3UArU9vq" target="_blank" rel="noopener">Discord</a>
-</footer>
-
-<script>
-  // Construit le href du bookmarklet dynamiquement depuis le script hébergé
-  var SCRIPT_URL = 'https://flaxeau.github.io/lorcana-stats/bookmarklet.js';
-  var bm = 'javascript:(function(){var s=document.createElement(\'script\');s.src=\'' + SCRIPT_URL + '?v=\'+Date.now();document.head.appendChild(s);})();';
-  document.getElementById('bm-link').href = bm;
-</script>
-</body>
-</html>
+      <span style="font-weight:600;font-size:13px" data-
