@@ -37,20 +37,83 @@
   .hero p { font-size: 17px; color: var(--muted); line-height: 1.7; margin-bottom: 36px; }
 
   /* BOOKMARKLET BUTTON */
-  .bm-area { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; margin-bottom: 48px; }
-  .bm-label { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 14px; }
-  .bm-drag-zone { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+  .bm-area { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px 28px 28px; margin-bottom: 48px; text-align: left; }
+
+  /* Sub-steps inside bm-area */
+  .bm-substep { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+  .bm-substep-num { width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; color: var(--muted); }
+  .bm-substep-body { flex: 1; }
+  .bm-substep-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .bm-substep-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* Keyboard shortcut pills */
+  .kbd-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+  .kbd-label { font-size: 11px; color: var(--muted); }
+  kbd {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-bottom: 2px solid #444d56;
+    border-radius: 5px; padding: 2px 7px;
+    font-family: inherit; font-size: 11px; color: var(--text);
+    white-space: nowrap;
+  }
+  .kbd-sep { color: var(--muted); font-size: 11px; }
+
+  /* Drag demo zone */
+  .bm-drag-zone { display: flex; align-items: center; justify-content: flex-start; gap: 0; flex-wrap: wrap; margin-top: 4px; }
+
+  /* The bookmarklet button */
   .bm-btn {
     display: inline-flex; align-items: center; gap: 8px;
     background: linear-gradient(135deg, var(--ruby), #c0392b);
-    color: #fff; font-weight: 600; font-size: 15px;
-    padding: 12px 22px; border-radius: 10px; border: none;
+    color: #fff; font-weight: 600; font-size: 14px;
+    padding: 10px 18px; border-radius: 8px; border: none;
     cursor: grab; user-select: none; text-decoration: none;
     box-shadow: 0 2px 8px rgba(231,76,60,.35);
-    transition: transform .1s, box-shadow .1s;
+    transition: transform .15s, box-shadow .15s;
+    position: relative; z-index: 1;
+    animation: bm-pulse 2.4s ease-in-out infinite;
   }
-  .bm-btn:active { cursor: grabbing; transform: scale(.97); }
-  .bm-btn:hover { box-shadow: 0 4px 16px rgba(231,76,60,.45); }
+  .bm-btn:active { cursor: grabbing; transform: scale(.96); animation: none; }
+  .bm-btn:hover { box-shadow: 0 4px 16px rgba(231,76,60,.5); animation: none; }
+  @keyframes bm-pulse {
+    0%, 100% { box-shadow: 0 2px 8px rgba(231,76,60,.35); }
+    50% { box-shadow: 0 2px 20px rgba(231,76,60,.65), 0 0 0 4px rgba(231,76,60,.12); }
+  }
+
+  /* Animated arrow */
+  .bm-arrow-wrap { display: flex; align-items: center; padding: 0 10px; }
+  .bm-arrow-track { position: relative; width: 64px; height: 2px; background: none; }
+  .bm-arrow-track::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: repeating-linear-gradient(90deg, var(--muted) 0 5px, transparent 5px 9px); }
+  .bm-arrow-dot {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 7px; height: 7px; border-radius: 50%; background: var(--ruby);
+    animation: slide-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes slide-dot { 0%,15%{ left:0; opacity:1; } 85%,100%{ left:calc(100% - 7px); opacity:.3; } }
+  .bm-arrow-head { font-size: 16px; color: var(--muted); margin-left: -4px; line-height: 1; }
+
+  /* Fake bookmarks bar destination */
+  .bm-bar-mock {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 1.5px dashed var(--border);
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 12px; color: var(--muted);
+    position: relative; overflow: hidden;
+  }
+  .bm-bar-mock::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 60%, rgba(231,76,60,.06));
+    pointer-events: none;
+    animation: bar-glow 2.4s ease-in-out infinite;
+  }
+  @keyframes bar-glow { 0%,100%{ opacity:0; } 50%{ opacity:1; } }
+  .bm-bar-mock-icon { font-size: 14px; }
+  .bm-bar-mock-items { display: flex; gap: 6px; opacity: .4; font-size: 11px; }
+  .bm-bar-mock-items span { background: var(--surface2); border-radius: 4px; padding: 2px 8px; }
+  .bm-bar-target { display: flex; align-items: center; gap: 5px; color: var(--ruby); font-weight: 600; font-size: 12px; border: 1px dashed var(--ruby); border-radius: 5px; padding: 2px 8px; opacity: .7; animation: target-blink 2.4s ease-in-out infinite; }
+  @keyframes target-blink { 0%,100%{ opacity:.5; } 50%{ opacity:1; } }
+
   .bm-hint { font-size: 13px; color: var(--muted); }
   .arrow { font-size: 22px; }
 
@@ -105,14 +168,49 @@
   <p>Analyse tes parties sur Duels.ink et découvre quelles cartes tu encres, quelles cartes tu joues, et ton winrate pour chaque combinaison de couleurs.</p>
 
   <div class="bm-area">
-    <div class="bm-label">① Glisse ce bouton dans ta barre de favoris</div>
-    <div class="bm-drag-zone">
-      <a id="bm-link" class="bm-btn" href="#">
-        📊 Lorcana Stats
-      </a>
-      <span class="arrow">→</span>
-      <span class="bm-hint">Glisse jusqu'ici<br><small style="opacity:.6">dans ta barre de favoris</small></span>
+
+    <!-- Sub-step A : show bookmarks bar -->
+    <div class="bm-substep">
+      <div class="bm-substep-num">A</div>
+      <div class="bm-substep-body">
+        <div class="bm-substep-title">Affiche ta barre de favoris</div>
+        <div class="bm-substep-desc">Si tu ne la vois pas en haut de ton navigateur, utilise le raccourci :</div>
+        <div class="kbd-row">
+          <span class="kbd-label">Windows / Linux</span>
+          <kbd>Ctrl</kbd><span class="kbd-sep">+</span><kbd>Shift</kbd><span class="kbd-sep">+</span><kbd>B</kbd>
+          <span class="kbd-sep" style="margin:0 6px">·</span>
+          <span class="kbd-label">Mac</span>
+          <kbd>⌘</kbd><span class="kbd-sep">+</span><kbd>Shift</kbd><span class="kbd-sep">+</span><kbd>B</kbd>
+        </div>
+      </div>
     </div>
+
+    <!-- Sub-step B : drag -->
+    <div class="bm-substep" style="margin-bottom:16px">
+      <div class="bm-substep-num">B</div>
+      <div class="bm-substep-body">
+        <div class="bm-substep-title">Glisse le bouton dans la barre</div>
+        <div class="bm-substep-desc" style="margin-bottom:12px">Maintiens le clic sur le bouton rouge et dépose-le dans ta barre de favoris.</div>
+        <div class="bm-drag-zone">
+          <a id="bm-link" class="bm-btn" href="#">
+            📊 Lorcana Stats
+          </a>
+          <div class="bm-arrow-wrap">
+            <div class="bm-arrow-track"><div class="bm-arrow-dot"></div></div>
+            <span class="bm-arrow-head">▶</span>
+          </div>
+          <div class="bm-bar-mock">
+            <span class="bm-bar-mock-icon">🔖</span>
+            <div class="bm-bar-mock-items">
+              <span>Favoris</span>
+              <span>…</span>
+            </div>
+            <div class="bm-bar-target">+ ici</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="compat">
       <span class="compat-dot"></span>
       Compatible Chrome, Firefox, Edge, Safari
@@ -127,8 +225,8 @@
   <div class="step">
     <div class="step-num">1</div>
     <div class="step-content">
-      <h3>Glisse le bouton dans tes favoris</h3>
-      <p>Clique et glisse le bouton « 📊 Lorcana Stats » vers ta barre de favoris. C'est tout — pas besoin de l'installer.</p>
+      <h3>Installe le bookmarklet (une seule fois)</h3>
+      <p>Affiche ta barre de favoris (<kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:inherit;font-size:13px">Ctrl+Shift+B</kbd>), puis glisse le bouton rouge « 📊 Lorcana Stats » dedans. Rien à installer — c'est juste un raccourci dans ton navigateur.</p>
     </div>
   </div>
 
