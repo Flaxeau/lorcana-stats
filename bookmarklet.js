@@ -378,7 +378,7 @@
     ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(W, fy); ctx.stroke();
     ctx.fillStyle = '#8b949e'; ctx.font = '11px system-ui, sans-serif';
-    ctx.fillText('flaxeau.github.io/lorcana-stats  |  Outil non-officiel, non affilie a Ravensburger ou Disney', 16, fy + 22);
+    ctx.fillText('ink-stats.ccg-forge.com  |  Outil non-officiel, non affilie a Ravensburger ou Disney', 16, fy + 22);
 
     canvas.toBlob(function(blob) {
       var url = URL.createObjectURL(blob);
